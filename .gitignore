@@ -3,6 +3,7 @@ data/*.db
 data/*.sqlite
 data/*.sqlite3
 data/*.db-journal
+data/demo-credentials.txt
 
 # Python
 __pycache__/
@@ -17,6 +18,7 @@ venv/
 env/
 
 # Rahasia / konfigurasi lokal
+.secret_key
 .env
 *.pem
 *.key

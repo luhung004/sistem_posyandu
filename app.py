@@ -8,25 +8,135 @@ Aplikasi web berbasis Flask.  Jalankan dengan:  python app.py
 import csv
 import io
 import os
+import secrets
+import time
 from datetime import date, datetime, timedelta
 from functools import wraps
 
-from flask import (Flask, Response, flash, g, jsonify, redirect, render_template,
-                   request, session, url_for)
+from flask import (Flask, Response, abort, flash, g, jsonify, redirect,
+                   render_template, request, session, url_for)
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import db
 import growth
 
+# SECRET_KEY menandatangani cookie sesi, jadi nilainya menentukan siapa yang
+# boleh masuk.  Tidak boleh ada nilai cadangan yang tertanam di kode: begitu
+# ada default, siapa pun yang membaca repositori bisa memalsukan cookie sesi
+# admin dan melewati halaman masuk.  Environment adalah satu-satunya sumber
+# yang stabil - nilainya sama di semua worker dan tidak hilang saat restart.
+_SECRET = os.environ.get("EPOSYANDU_SECRET")
+if not _SECRET:
+    raise RuntimeError(
+        "EPOSYANDU_SECRET belum diset.\n"
+        "Buat nilai acak dengan:\n"
+        "    python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+        "lalu simpan sebagai variabel lingkungan sebelum menjalankan aplikasi."
+    )
+
+# Halaman ini hanya dipakai lewat HTTPS di server produksi.  Dimatikan untuk
+# pemakaian lokal lewat http://127.0.0.1 karena cookie berflag Secure tidak
+# akan terkirim pada koneksi biasa.
+_HTTPS = os.environ.get("EPOSYANDU_HTTPS", "1") == "1"
+
 app = Flask(__name__)
 app.config.update(
-    SECRET_KEY=os.environ.get("EPOSYANDU_SECRET", "eposyandu-lestari-12-banjarnegara"),
+    SECRET_KEY=_SECRET,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    JSON_AS_ASCII=False,
+    SESSION_COOKIE_SECURE=_HTTPS,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
 )
 
+# Server produksi (gunicorn/waitress) selalu berada di belakang reverse proxy.
+# ProxyFix meneruskan skema, alamat IP, dan Host yang asli supaya url_for(),
+# penandaan cookie aman, dan catatan log menghasilkan nilai yang benar.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
 app.teardown_appcontext(db.close_db)
+
+
+# ===========================================================================
+# Keamanan: token CSRF, batas percobaan masuk, header keamanan
+# ===========================================================================
+def csrf_token():
+    """Token unik per sesi untuk menyertai setiap POST."""
+    if "_csrf" not in session:
+        session["_csrf"] = secrets.token_urlsafe(32)
+    return session["_csrf"]
+
+
+@app.before_request
+def periksa_csrf():
+    """
+    Tolak setiap POST yang tidak membawa token CSRF milik sesi sendiri.
+
+    Tanpa ini, halaman lain bisa menyalin form ini ke situsnya dan mengirim
+    permintaan atas nama pengguna yang sedang login - termasuk menghapus data
+    balita atau membuat akun admin baru.
+    """
+    if request.method != "POST":
+        return None
+
+    token_sesi = session.get("_csrf", "")
+    token_kirim = request.form.get("_csrf", "")
+
+    # Tanpa token sama sekali, atau sesi yang belum punya token, selalu
+    # ditolak.  Pengecekan wajib: compare_digest("", "") bernilai True,
+    # sehingga pengunjung yang belum pernah membuka form bisa lolos tanpa
+    # membawa apa pun.
+    if (not token_sesi or not token_kirim
+            or not secrets.compare_digest(token_kirim, token_sesi)):
+        abort(400, description="Token CSRF tidak valid. Muat ulang halaman.")
+    return None
+    return None
+
+
+# Pembatas percobaan masuk.  Disimpan di memori proses: cukup untuk satu
+# server dengan sedikit pengguna, dan tidak perlu menambah kolom ke basis data.
+_KUOTA_COBAL = 5
+_KUNCI_DETIK = 15 * 60
+_gagal_login = {}
+
+
+def _kunci_gagal(nama):
+    """(jumlah kegagalan, detik_since terakhir gagal) untuk satu username."""
+    return _gagal_login.get(nama.lower(), (0, 0.0))
+
+
+def _tolak_sementara(nama, sekarang):
+    jumlah, terakhir = _kunci_gagal(nama)
+    if jumlah < _KUOTA_COBAL:
+        return False
+    return (sekarang - terakhir) < _KUNCI_DETIK
+
+
+def _catat_gagal(nama, sekarang):
+    jumlah, _ = _kunci_gagal(nama)
+    _gagal_login[nama.lower()] = (jumlah + 1, sekarang)
+    jumlah_baru = jumlah + 1
+    sisa = _KUOTA_COBAL - jumlah_baru
+    if sisa <= 0:
+        return ("Terlalu banyak percobaan gagal. Coba lagi dalam "
+                f"{_KUNCI_DETIK // 60} menit.")
+    return f"Nama pengguna atau kata sandi salah. Sisa percobaan: {sisa}."
+
+
+def _reset_gagal(nama):
+    _gagal_login.pop(nama.lower(), None)
+
+
+@app.after_request
+def header_keamanan(respuesta):
+    """Header yang mencegah peramban menebak-nebak isi halaman."""
+    respuesta.headers["X-Frame-Options"] = "DENY"
+    respuesta.headers["X-Content-Type-Options"] = "nosniff"
+    respuesta.headers["Referrer-Policy"] = "same-origin"
+    if _HTTPS:
+        respuesta.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains")
+    return respuesta
 
 IDENTITAS = {
     "nama": "Posyandu Lestari 12",
@@ -89,6 +199,7 @@ def inject_globals():
         "status_lencana": _status_lencana,
         "growth_label": _growth_label,
         "ukur_terakhir": ukur_terakhir,
+        "csrf_token": csrf_token,
     }
 
 
@@ -299,19 +410,31 @@ def login():
     if request.method == "POST":
         username = (request.form.get("username") or "").strip()
         password = request.form.get("password") or ""
+        sekarang = time.monotonic()
+
+        if _tolak_sementara(username, sekarang):
+            flash(f"Terlalu banyak percobaan gagal. Coba lagi dalam "
+                  f"{_KUNCI_DETIK // 60} menit.", "error")
+            return render_template("login.html")
+
         user = db.query("SELECT * FROM users WHERE username = ?", (username,), one=True)
 
         if user is None or not check_password_hash(user["password_hash"], password):
-            flash("Nama pengguna atau kata sandi salah.", "error")
+            flash(_catat_gagal(username, sekarang), "error")
         elif not user["aktif"]:
             flash("Akun ini sedang tidak aktif. Hubungi administrator.", "error")
         else:
+            _reset_gagal(username)
             session.clear()
             session["user_id"] = user["id"]
             session["nama"] = user["nama"]
             session["role"] = user["role"]
+            session.permanent = True
             tujuan = request.args.get("next")
-            if tujuan and tujuan.startswith("/"):
+            # Hanya terima path internal.  startswith("/") saja masih
+            # membolehkan "//situs.asing.com" yang berakhiran sebagai pengalihan
+            # ke luar aplikasi.
+            if tujuan and tujuan.startswith("/") and not tujuan.startswith("//"):
                 session["setelah_splash"] = tujuan
             return redirect(url_for("splash"))
 
@@ -983,14 +1106,24 @@ def galat_server(e):
 
 # ===========================================================================
 if __name__ == "__main__":
-    if not os.path.exists(db.DB_PATH):
+    # Server pengembangan (Flask).  Untuk produksi jangan pakai blok ini -
+    # jalankan lewat gunicorn atau waitress dengan wsgi:application.
+    if not db.tabel_ada():
         print("Basis data belum ada. Membuat tabel dan data awal...")
-        db.init_db(seed=True)
+        db.init_db(seed=os.environ.get("EPOSYANDU_SEED") == "1")
+    if not db.tabel_ada():
+        print("PERINGATAN: basis data masih kosong - tidak ada akun masuk.")
+        print("Buat data awal dengan: set EPOSYANDU_SEED=1 lalu ulangi,")
+        print("atau isi sendiri lewat halaman pengguna.")
     print("=" * 64)
     print("  Sistem Informasi E-Posyandu Terintegrasi")
     print("  Posyandu Lestari 12 - Merden, Purwanegara, Banjarnegara")
     print("=" * 64)
-    print("  Buka di peramban:  http://127.0.0.1:5000")
-    print("  Akun contoh:       admin/admin123  |  kader/kader123  |  bidan/bidan123")
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", 5000))
+    print(f"  Buka di peramban:  http://{host}:{port}")
     print("=" * 64)
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    # Mode debug memberi antarmuka konsol Python yang dapat menjalankan perintah
+    # di server.  Karena itu harus mati kecuali diminta lewat FLASK_DEBUG=1.
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1",
+            host=host, port=port)

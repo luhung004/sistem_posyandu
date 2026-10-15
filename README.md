@@ -125,18 +125,46 @@ python seed.py
 
 ## Akun Bawaan
 
-Aplikasi menyertakan tiga akun contoh yang dibuat otomatis saat basis data
-pertama kali dibangun. **Ganti kata sandi ini sebelum dipakai sungguhan.**
+Tiga akun contoh dibuat saat basis data pertama kali dibangun, **hanya jika**
+variabel `EPOSYANDU_SEED=1` diset.
 
-| Peran | Nama Pengguna | Kata Sandi | Nama | Jabatan |
-|---|---|---|---|---|
-| Administrator | `admin` | `admin123` | Administrator Sistem | Pengelola Sistem |
-| Kader Posyandu | `kader` | `kader123` | Sri Wahyuni | Kader Posyandu |
-| Bidan Desa | `bidan` | `bidan123` | Rina Puspitasari, A.Md.Keb | Bidan Desa |
+| Peran | Nama Pengguna | Nama | Jabatan |
+|---|---|---|---|
+| Administrator | `admin` | Administrator Sistem | Pengelola Sistem |
+| Kader Posyandu | `kader` | Sri Wahyuni | Kader Posyandu |
+| Bidan Desa | `bidan` | Rina Puspitasari, A.Md.Keb | Bidan Desa |
 
-> **Catatan:** kotak "akun contoh" pada halaman login sengaja dihapus agar kredensial
-> tidak tampil di layar. Daftar akun kini hanya ada di dokumen ini dan pada keluaran
-> terminal saat aplikasi dijalankan.
+**Kata sandinya acak dan dibuat berbeda setiap kali**, lalu disimpan di:
+
+```
+data/demo-credentials.txt
+```
+
+Berkas itu tidak ikut terunggah ke repositori. Buka untuk melihat kata sandi
+ketiganya.
+
+> **Kenapa tidak memakai `admin123`?**
+> Nilai yang tertanam di kode bisa ditebak siapa saja. Pada server yang sedang
+> daring, akun admin cukup dihantam dengan beberapa kombinasi umum. Karena itu
+> kata sandi tidak pernah ditulis di kode maupun ditampilkan di halaman login.
+
+---
+
+## Variabel Lingkungan
+
+Aplikasi menolak berjalan bila `EPOSYANDU_SECRET` belum diset.
+
+| Variabel | Wajib | Kegunaan |
+|---|---|---|
+| `EPOSYANDU_SECRET` | ya | Menandatangani cookie sesi. Buat dengan `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `EPOSYANDU_SEED` | tidak | Isi `1` untuk membuat basis data beserta data contoh |
+| `EPOSYANDU_HTTPS` | tidak | `0` untuk pemakaian lokal lewat http, `1` di server (bawaan) |
+| `TZ` | disarankan | Isi `Asia/Jakarta` agar tanggal dan umur balita benar |
+| `PORT` | tidak | Port server; biasanya diisi otomatis oleh platform |
+
+> Data pribadi anak (NIK, nomor KK, alamat) dilindungi **UU PDP No. 27/2022**.
+> Jangan menaruh data nyata di server publik tanpa persetujuan orang tua/wali
+> dan tanpa pembatasan akses yang memadai.
 
 ---
 
@@ -247,26 +275,55 @@ dapat diakses oleh `admin`.
 
 ## Catatan Keamanan
 
-Aplikasi ini ditujukan untuk **jaringan lokal / komputer sendiri**, bukan untuk
-dipasang langsung di internet. Sebelum dipakai sungguhan:
+Aplikasi ini bisa dijalankan di jaringan lokal maupun di server. Untuk pemakaian
+sungguhan, perhatikan hal-hal berikut.
 
-1. **Ganti semua kata sandi bawaan** lewat menu Pengguna.
-2. **Ganti `SECRET_KEY`.** Kunci bawaan ada di `app.py` dan sebaiknya diisi lewat
-   variabel lingkungan:
+### Sudah ditangani di kode
+
+||Ancaman |Penangan|
+|---|---|
+|Sesi dipalsukan |`SECRET_KEY` hanya dibaca dari `EPOSYANDU_SECRET`. Tidak ada nilai cadangan di kode, jadi aplikasi **menolak berjalan** bila variabel ini kosong.|
+|Konsol Python terbuka |Mode debug mati secara bawaan. Hanya aktif bila `FLASK_DEBUG=1` diset.|
+|Permintaan dari situs lain |Setiap POST harus membawa token CSRF milik sesinya sendiri; tanpa itu ditolak `400`.|
+|Perkiraan kata sandi |Kata sandi dibatasi 5 percobaan gagal per nama pengguna, lalu dikunci 15 menit.|
+|Penyamaran halaman |Header `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, dan HSTS.|
+|Kebocoran lewat HTTP |Cookie sesi memakai flag `Secure` dan `HttpOnly`.|
+
+### Sebelum diisi data nyata
+
+1. **Ganti seluruh kata sandi** lewat menu Pengguna.
+2. **Pastikan `EPOSYANDU_SECRET` dibuat acak** untuk setiap server:
    ```
-   set EPOSYANDU_SECRET=kunci-rahasia-anda-sendiri
-   python app.py
+   python -c "import secrets; print(secrets.token_hex(32))"
    ```
-3. **Matikan mode debug** untuk pemakaian nyata. Mode debug membuka konsol
-   interaktif yang berbahaya bila dapat diakses orang lain. Ubah baris terakhir
-   `app.py` menjadi:
-   ```python
-   app.run(debug=False, host="127.0.0.1", port=5000)
-   ```
-4. **Jangan jadikan pesan galat detail** sebagai tampilan publik.
-5. Untuk pemakaian bersama lewat jaringan, gunakan server WSGI produksi
-   (mis. Waitress di Windows) di belakang reverse proxy, bukan server
-   pengembangan Flask.
+3. **Set `TZ=Asia/Jakarta`.** Tanpa itu, antara pukul 17.00-24.00 WIB tanggal
+   dan umur balita bisa terhitung salah satu hari karena server memakai UTC.
+4. **Sediakan cadangan data.** Berkas `data/eposyandu.db` adalah satu-satunya
+   salinan.Tidak ada mekanisme pencadangan otomatis.
+5. **Tinjau hak akses.**
+   `/laporan/export.csv` dan `/laporan/cetak` bisa diakses semua peran, termasuk
+   `kader`. Persempit bila mengizinkan data nyata.
+6. **`pengukuran/<id>/hapus`** hanya butuh peran apa pun, tidak seperti
+   `balita/<id>/hapus` yang khusus admin.
+
+### Menjalankan di server
+
+Jangan pernah menjalankan `python app.py` di server. Gunakan WSGI:
+
+```bash
+# Linux / PaaS
+gunicorn --bind 0.0.0.0:$PORT wsgi:application
+
+# Windows
+waitress-serve --host=0.0.0.0 --port=$PORT wsgi:application
+```
+
+Basis data dan tabel dibuat otomatis oleh `wsgi.py` saat server mulai.
+
+> **Penting: SQLite perlu penyimpanan yang bertahan.** Pada platform hosting
+> dengan sistem berkas sementara (sebagian besar paket gratis), `data/`
+> akan hilang setiap kali server dimulai ulang atau diperbarui. Paket
+> berbayar dengan persistent disk diperlukan, atau pindahkan ke PostgreSQL.
 
 ---
 

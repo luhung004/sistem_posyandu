@@ -14,6 +14,7 @@ dan hasil perhitungannya tetap dapat diverifikasi.
 Jalankan:  python seed.py          (membuat ulang dari kosong)
 """
 import os
+import secrets
 import random
 import sqlite3
 from datetime import date, timedelta
@@ -30,11 +31,22 @@ TODAY = date.today()
 # ---------------------------------------------------------------------------
 from werkzeug.security import generate_password_hash  # noqa: E402
 
+# Kata sandi TIDAK ditulis di sini.  Nilai yang tertanam dalam kode publik bisa
+# ditebak siapa saja, sehingga akun admin pada server yang sedang daring akan
+# dibobol hanya dengan mencoba beberapa kombinasi umum.  Sebagai gantinya, kata
+# sandi acak dibuat saat penempatan dan disimpan di berkas lokal yang tidak
+# ikut terunggah ke repositori.
+def _sandi_acak():
+    huruf = "abcdefghijkmnopqrstuvwxyz23456789"
+    return "".join(secrets.choice(huruf) for _ in range(12))
+
+
 USERS = [
-    ("admin", "admin123", "Administrator Sistem", "Pengelola Sistem", "admin"),
-    ("kader", "kader123", "Sri Wahyuni", "Kader Posyandu", "kader"),
-    ("bidan", "bidan123", "Rina Puspitasari, A.Md.Keb", "Bidan Desa", "bidan"),
+    ("admin", "Administrator Sistem", "Pengelola Sistem", "admin"),
+    ("kader", "Sri Wahyuni", "Kader Posyandu", "kader"),
+    ("bidan", "Rina Puspitasari, A.Md.Keb", "Bidan Desa", "bidan"),
 ]
+BERKAS_SANDI = "demo-credentials.txt"
 
 # ---------------------------------------------------------------------------
 # Data balita contoh
@@ -100,12 +112,29 @@ def seed_database():
         return
 
     # ---- pengguna --------------------------------------------------------
-    for username, pw, nama, jabatan, role in USERS:
+    daftar_sandi = []
+    for username, nama, jabatan, role in USERS:
+        pw = _sandi_acak()
+        daftar_sandi.append((username, pw))
         db.execute(
             """INSERT INTO users (username, password_hash, nama, jabatan, role)
                VALUES (?, ?, ?, ?, ?)""",
             (username, generate_password_hash(pw), nama, jabatan, role),
         )
+
+    # Kredensial demo ditulis ke berkas lokal (sudah masuk .gitignore), bukan
+    # ditampilkan di layar atau dicetak ke log server.
+    try:
+        with open(os.path.join(db.DATA_DIR, BERKAS_SANDI), "w",
+                  encoding="utf-8") as fh:
+            fh.write("Kredensial demo E-Posyandu\n")
+            fh.write("=" * 40 + "\n")
+            for username, pw in daftar_sandi:
+                fh.write("%-8s : %s\n" % (username, pw))
+            fh.write("=" * 40 + "\n")
+            fh.write("Segera ganti kata sandi ini lewat menu Pengguna.\n")
+    except OSError:
+        pass
     kader_id = db.query("SELECT id FROM users WHERE username = 'kader'", one=True)["id"]
 
     # ---- pengaturan ------------------------------------------------------
@@ -265,9 +294,10 @@ def seed_database():
     print(f"  balita           : {dibuat_balita}")
     print(f"  penimbangan      : {dibuat_ukur}")
     print(f"  tindak lanjut    : {dibuat_tl}")
-    print("\nAkun untuk masuk:")
-    for username, pw, nama, jabatan, role in USERS:
-        print(f"  {role:<6} ->  {username} / {pw}")
+    # Kata sandi sengaja tidak dicetak di sini.  Log server mudah dibaca pihak
+    # lain, sedangkan berkas kredensial lokal bisa dikendalikan sendiri.
+    print(f"\nKredensial demo tersimpan di: "
+          f"{os.path.join(db.DATA_DIR, BERKAS_SANDI)}")
 
 
 if __name__ == "__main__":

@@ -166,6 +166,7 @@
         <div class="kartu">
             <h2>{{ ikon('catatan') }} Tindak Lanjut</h2>
             <form method="post" action="{{ url_for('tindak_lanjut_tambah', balita_id=b.id) }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <div class="form-baris">
                     <label for="jenis">Jenis Tindakan</label>
                     <select id="jenis" name="jenis" required>

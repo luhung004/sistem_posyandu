@@ -142,6 +142,7 @@
                                 <form method="post" style="display:inline"
                                       action="{{ url_for('pengukuran_hapus', ukur_id=r.id) }}"
                                       data-konfirmasi="Hapus data penimbangan tanggal {{ r.tanggal|tgl_id('pendek') }}?">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                                     <button type="submit" class="tombol kecil bahaya" title="Hapus">
                                         {{ ikon('hapus') }}
                                     </button>
@@ -197,6 +198,7 @@
             <hr class="pemisah">
             <h3>Tambah Catatan Tindak Lanjut</h3>
             <form method="post" action="{{ url_for('tindak_lanjut_tambah', balita_id=b.id) }}">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <div class="form-kisi tiga">
                     <div class="form-baris">
                         <label for="tl_jenis">Jenis <span class="wajib">*</span></label>
@@ -313,6 +315,7 @@
             </p>
             <form method="post" action="{{ url_for('balita_hapus', balita_id=b.id) }}"
                   data-konfirmasi="Hapus data {{ b.nama }} beserta SELURUH riwayat penimbangan dan tindak lanjutnya? Tindakan ini tidak dapat dibatalkan.">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                 <button type="submit" class="tombol bahaya penuh">
                     {{ ikon('hapus') }} Hapus Data Balita
                 </button>

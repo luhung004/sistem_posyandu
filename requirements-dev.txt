@@ -1,0 +1,20 @@
+# -*- coding: utf-8 -*-
+"""
+Dependensi pengembangan - tidak diperlukan saat aplikasi berjalan di server.
+
+Hanya dipakai skrip bantu di folder tools/ untuk membangun ulang folder
+who_data/ dari berkas Excel resmi WHO, atau memeriksa data rujukan:
+
+    python -m pip install -r requirements-dev.txt
+    python tools/build_who_data.py   # membangun who_data/*.json dari Excel WHO
+    python tools/validate_who.py     # memeriksa kewajaran data rujukan
+    python tools/inspect_who.py      # menampilkan isi data rujukan
+
+Folder tools/ tidak diimpor aplikasi apa pun.  Itu sebabnya modul ini
+disingkahkan dari requirements.txt: menambahkannya di sana akan menarik
+sekitar 100 MB numpy/scipy ke server produksi tanpa ada kebutuhan.
+"""
+
+# Membaca dan menulis berkas Excel sumber WHO (.xlsx)
+pandas>=2.0
+openpyxl>=3.1

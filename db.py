@@ -70,6 +70,30 @@ def execute(sql, params=()):
     return lastrow
 
 
+def tabel_ada(nama="users"):
+    """
+    True bila basis data sudah berisi tabel yang diminta.
+
+    Memeriksa isi skema, bukan keberadaan berkas.  SQLite membuat berkas
+    kosong begitu connect() dipanggil, jadi os.path.exists() akan selalu
+    bernilai benar begitu permintaan pertama menyentuh basis data - padahal
+    tabelnya belum ada sama sekali.
+    """
+    if not os.path.exists(DB_PATH):
+        return False
+    try:
+        conn = _connect()
+    except sqlite3.Error:
+        return False
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (nama,)).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+
+
 def init_db(seed=False):
     """Buat tabel dari schema.sql. Aman dijalankan berulang."""
     with open(SCHEMA_PATH, "r", encoding="utf-8") as fh:

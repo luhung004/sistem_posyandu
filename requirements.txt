@@ -60,9 +60,11 @@ MarkupSafe>=3.0,<4.0
 #
 # Untuk memasang semua: python -m pip install pandas openpyxl
 
-# Membaca dan menulis berkas Excel sumber WHO (.xlsx)
-pandas>=2.0
-openpyxl>=3.1
+# Bergeser ke requirements-dev.txt.  Modul ini hanya dibutuhkan skrip bantu di
+# tools/, tidak pernah diimpor aplikasi.  Kalau tetap aktif di sini, pip
+# menarik sekitar 100 MB numpy/scipy ke server produksi tanpa ada gunanya.
+
+# Untuk memasang semuanya: python -m pip install -r requirements-dev.txt
 # ---------------------------------------------------------------------------
 # Standar library - tidak perlu dipasang
 # ---------------------------------------------------------------------------
@@ -76,3 +78,17 @@ openpyxl>=3.1
 # Tidak ada dependensi Node.js, build tool, atau server basis data terpisah.
 # Koneksi internet hanya dipakai untuk memuat Google Fonts; aplikasi tetap
 # berjalan tanpa internet.
+
+
+# ---------------------------------------------------------------------------
+# Server WSGI untuk produksi
+# ---------------------------------------------------------------------------
+# Jangan pernah menjalankan aplikasi lewat "python app.py" di server.  Server
+# pengembangan Flask menyediakan antarmuka konsol Python yang bisa dieksploitasi
+# bila tidak sengaja dapat diakses dari internet.
+
+# Server produksi di Linux / PaaS (Render, Railway, Fly, Heroku)
+gunicorn>=21.2
+
+# Server produksi untuk Windows - padanan gunicorn yang bisa jalan di mesin ini
+waitress>=3.0
