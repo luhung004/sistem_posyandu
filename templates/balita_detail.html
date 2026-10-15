@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'balita' %}
+{% block judul %}Detail Balita{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>{{ b.nama }}</h1>
+        <div class="keterangan">
+            {{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }} &middot;
+            {{ info.umur_teks }} &middot; lahir {{ b.birth_date|tgl_id }}
+            {% if b.nama_ibu %} &middot; ibu: {{ b.nama_ibu }}{% endif %}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_list') }}" class="tombol sekunder">{{ ikon('kembali') }} Daftar</a>
+        <a href="{{ url_for('kms', balita_id=b.id) }}" class="tombol sekunder">{{ ikon('grafik') }} Grafik KMS</a>
+        <a href="{{ url_for('prediksi_detail', balita_id=b.id) }}" class="tombol cyan">{{ ikon('prediksi') }} Prediksi Dini</a>
+        <a href="{{ url_for('pengukuran_tambah', balita_id=b.id) }}" class="tombol hijau">{{ ikon('timbang') }} Timbang Sekarang</a>
+    </div>
+</div>
+
+{# ---------------- status terkini ---------------- #}
+<div class="kisi kisi-4 mb-3">
+    <div class="z-kotak">
+        <div class="indikator">Berat Badan / Umur</div>
+        <div class="nilai {{ 'bahaya' if info.z_wfa is not none and info.z_wfa < -2 else ('waspada' if info.z_wfa is not none and info.z_wfa < -1 else 'normal') }}">
+            {{ info.z_wfa|zscore if info.z_wfa is not none else '-' }}
+        </div>
+        <div class="status">
+            {% if info.z_wfa is not none %}{{ growth_label('wfa', info.z_wfa) }}{% else %}Belum ada data{% endif %}
+        </div>
+    </div>
+    <div class="z-kotak">
+        <div class="indikator">Tinggi Badan / Umur</div>
+        <div class="nilai {{ 'bahaya' if info.z_lhfa is not none and info.z_lhfa < -2 else ('waspada' if info.z_lhfa is not none and info.z_lhfa < -1 else 'normal') }}">
+            {{ info.z_lhfa|zscore if info.z_lhfa is not none else '-' }}
+        </div>
+        <div class="status">
+            {% if info.z_lhfa is not none %}{{ info.stunting.label }}{% else %}Belum ada data{% endif %}
+        </div>
+    </div>
+    <div class="z-kotak">
+        <div class="indikator">Berat / Tinggi Badan</div>
+        <div class="nilai {{ 'bahaya' if info.z_wfh is not none and info.z_wfh < -2 else ('waspada' if info.z_wfh is not none and info.z_wfh < -1 else 'normal') }}">
+            {{ info.z_wfh|zscore if info.z_wfh is not none else '-' }}
+        </div>
+        <div class="status">
+            {% if info.z_wfh is not none %}{{ growth_label('wfh', info.z_wfh) }}{% else %}Belum ada data{% endif %}
+        </div>
+    </div>
+    <div class="z-kotak">
+        <div class="indikator">Tren Tinggi Badan</div>
+        <div class="nilai" style="font-size:1.25rem;
+             color:{{ 'var(--bahaya)' if info.tren.level == 'bahaya' else ('var(--waspada)' if info.tren.level == 'waspada' else 'var(--normal)') }}">
+            {{ info.tren.label }}
+        </div>
+        <div class="status">
+            {% if info.tren.delta_per_bulan is not none %}
+                {{ info.tren.delta_per_bulan|angka(2) }} SD/bulan
+            {% else %}
+                perlu minimal 2 pengukuran
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ---------------- skala Z TB/U ---------------- #}
+<div class="kartu">
+    <h2>Posisi Z-Score Tinggi Badan menurut Umur (TB/U)</h2>
+    <p class="keterangan-kecil">
+        Skala di bawah menunjukkan posisi Z-Score anak terhadap ambang batas WHO.
+        Nilai &lt; &minus;2 SD berarti pendek (stunting), &lt; &minus;3 SD berarti sangat pendek.
+    </p>
+    {% if info.z_lhfa is not none %}
+    {% set pos = ((info.z_lhfa + 4) / 8 * 100) %}
+    {% set pos = 1 if pos < 1 else (99 if pos > 99 else pos) %}
+    <div class="skala-z">
+        <div class="skala-penunjuk" style="left:calc({{ pos|round(1) }}% - 1.5px)"></div>
+    </div>
+    <div class="skala-label">
+        <span>&minus;4 SD</span>
+        <span>&minus;3 SD</span>
+        <span>&minus;2 SD</span>
+        <span>0 SD</span>
+        <span>+2 SD</span>
+        <span>+4 SD</span>
+    </div>
+    {% else %}
+    <div class="kosong" style="padding:24px">
+        <div>Belum ada data pengukuran untuk menampilkan posisi Z-Score.</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="kisi kisi-2-1">
+    <div>
+        {# ---------------- riwayat penimbangan ---------------- #}
+        <div class="kartu kartu-tanpa-pad">
+            <div class="kartu-kepala">
+                <h2>Riwayat Penimbangan</h2>
+                <span class="keterangan-kecil">{{ riwayat|length }} catatan</span>
+            </div>
+
+            {% if riwayat %}
+            <div class="tabel-bungkus">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Umur</th>
+                            <th class="angka">BB (kg)</th>
+                            <th class="angka">TB (cm)</th>
+                            <th class="angka">LK (cm)</th>
+                            <th class="angka">BB/U</th>
+                            <th class="angka">TB/U</th>
+                            <th class="angka">BB/TB</th>
+                            <th>Status Stunting</th>
+                            <th class="tengah">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in riwayat %}
+                        <tr>
+                            <td class="tanpa-bungkus">{{ r.tanggal|tgl_id('pendek') }}</td>
+                            <td class="tanpa-bungkus teks-lembut">{{ r.umur_hari|umur }}</td>
+                            <td class="angka">{{ r.berat|angka(2) }}</td>
+                            <td class="angka">{{ r.tinggi|angka(1) }}</td>
+                            <td class="angka">{{ r.lingkar_kepala|angka(1) }}</td>
+                            <td class="angka">{{ r.z_wfa|zscore if r.z_wfa is not none else '-' }}</td>
+                            <td class="angka">{{ r.z_lhfa|zscore if r.z_lhfa is not none else '-' }}</td>
+                            <td class="angka">{{ r.z_wfh|zscore if r.z_wfh is not none else '-' }}</td>
+                            <td>
+                                <span class="lencana {{ status_lencana(r.z_lhfa) }}">
+                                    {{ growth_label('lhfa', r.z_lhfa) }}
+                                </span>
+                            </td>
+                            <td class="tengah">
+                                <form method="post" style="display:inline"
+                                      action="{{ url_for('pengukuran_hapus', ukur_id=r.id) }}"
+                                      data-konfirmasi="Hapus data penimbangan tanggal {{ r.tanggal|tgl_id('pendek') }}?">
+                                    <button type="submit" class="tombol kecil bahaya" title="Hapus">
+                                        {{ ikon('hapus') }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="kosong">
+                {{ ikon('timbang') }}
+                <div class="judul">Belum ada data penimbangan</div>
+                <div>Tambahkan hasil penimbangan pertama untuk mulai memantau pertumbuhan.</div>
+                <div style="margin-top:16px">
+                    <a href="{{ url_for('pengukuran_tambah', balita_id=b.id) }}" class="tombol hijau">
+                        {{ ikon('tambah') }} Tambah Penimbangan
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ---------------- tindak lanjut ---------------- #}
+        <div class="kartu">
+            <h2>{{ ikon('catatan') }} Riwayat Tindak Lanjut</h2>
+
+            {% if tindak_lanjut %}
+            <div style="margin-bottom:16px">
+                {% for t in tindak_lanjut %}
+                <div class="peringatan-item normal">
+                    <span class="ikon">{{ ikon('centang') }}</span>
+                    <div style="flex:1">
+                        <div class="judul">
+                            {{ t.jenis|capitalize }}
+                            <span class="teks-samar" style="font-weight:400;font-size:.78rem">
+                                &middot; {{ t.tanggal|tgl_id }}
+                            </span>
+                        </div>
+                        <p class="pesan">{{ t.keterangan or '-' }}</p>
+                        {% if t.petugas %}
+                        <div class="keterangan-kecil">Petugas: {{ t.petugas }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="keterangan-kecil">Belum ada catatan tindak lanjut untuk balita ini.</p>
+            {% endif %}
+
+            <hr class="pemisah">
+            <h3>Tambah Catatan Tindak Lanjut</h3>
+            <form method="post" action="{{ url_for('tindak_lanjut_tambah', balita_id=b.id) }}">
+                <div class="form-kisi tiga">
+                    <div class="form-baris">
+                        <label for="tl_jenis">Jenis <span class="wajib">*</span></label>
+                        <select id="tl_jenis" name="jenis" required>
+                            <option value="">Pilih jenis</option>
+                            <option value="rujukan">Rujukan ke Puskesmas</option>
+                            <option value="PMT">Pemberian Makanan Tambahan</option>
+                            <option value="edukasi">Edukasi Gizi</option>
+                            <option value="kunjungan rumah">Kunjungan Rumah</option>
+                            <option value="imunisasi">Imunisasi</option>
+                            <option value="lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-baris">
+                        <label for="tl_tanggal">Tanggal</label>
+                        <input type="date" id="tl_tanggal" name="tanggal"
+                               value="{{ hari_ini }}" max="{{ hari_ini }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="tl_petugas">Petugas</label>
+                        <input type="text" id="tl_petugas" name="petugas"
+                               value="{{ user.nama }}" placeholder="Nama petugas">
+                    </div>
+                </div>
+                <div class="form-baris">
+                    <label for="tl_ket">Keterangan</label>
+                    <textarea id="tl_ket" name="keterangan" rows="2"
+                              placeholder="Uraian tindakan yang dilakukan"></textarea>
+                </div>
+                <button type="submit" class="tombol">{{ ikon('tambah') }} Simpan Catatan</button>
+            </form>
+        </div>
+    </div>
+
+    {# ---------------- kolom samping ---------------- #}
+    <div>
+        <div class="kartu">
+            <h2>{{ ikon('anak') }} Identitas</h2>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Nama</span><span class="nilai">{{ b.nama }}</span></div>
+                <div class="baris"><span class="kunci">Jenis kelamin</span>
+                    <span class="nilai">{{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }}</span></div>
+                <div class="baris"><span class="kunci">Tanggal lahir</span>
+                    <span class="nilai">{{ b.birth_date|tgl_id('pendek') }}</span></div>
+                <div class="baris"><span class="kunci">Umur</span><span class="nilai">{{ info.umur_teks }}</span></div>
+                {% if b.nik %}<div class="baris"><span class="kunci">NIK</span><span class="nilai">{{ b.nik }}</span></div>{% endif %}
+                {% if b.no_kk %}<div class="baris"><span class="kunci">No. KK</span><span class="nilai">{{ b.no_kk }}</span></div>{% endif %}
+                <div class="baris"><span class="kunci">Nama ibu</span><span class="nilai">{{ b.nama_ibu or '-' }}</span></div>
+                <div class="baris"><span class="kunci">Nama ayah</span><span class="nilai">{{ b.nama_ayah or '-' }}</span></div>
+                <div class="baris"><span class="kunci">Telepon</span><span class="nilai">{{ b.no_hp or '-' }}</span></div>
+                <div class="baris"><span class="kunci">Alamat</span>
+                    <span class="nilai">{{ (b.alamat or '-') }}{% if b.rt %} RT {{ b.rt }}{% endif %}{% if b.rw %}/RW {{ b.rw }}{% endif %}</span></div>
+            </div>
+            <div class="form-aksi">
+                <a href="{{ url_for('balita_edit', balita_id=b.id) }}" class="tombol sekunder penuh">
+                    {{ ikon('ubah') }} Ubah Data
+                </a>
+            </div>
+        </div>
+
+        <div class="kartu">
+            <h2>{{ ikon('jantung') }} Data Pendukung</h2>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Berat lahir</span>
+                    <span class="nilai">{{ b.bb_lahir|angka(2) if b.bb_lahir else '-' }} kg</span></div>
+                <div class="baris"><span class="kunci">Panjang lahir</span>
+                    <span class="nilai">{{ b.pb_lahir|angka(1) if b.pb_lahir else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">ASI eksklusif</span>
+                    <span class="nilai">
+                        {% if b.asi_eksklusif == 1 %}Ya{% elif b.asi_eksklusif == 0 %}Tidak{% else %}-{% endif %}
+                    </span></div>
+                <div class="baris"><span class="kunci">Tinggi ibu</span>
+                    <span class="nilai">{{ b.tinggi_ibu|angka(1) if b.tinggi_ibu else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">Berat ibu saat hamil</span>
+                    <span class="nilai">{{ b.berat_ibu_hamil|angka(1) if b.berat_ibu_hamil else '-' }} kg</span></div>
+            </div>
+        </div>
+
+        {% if b.catatan %}
+        <div class="kartu">
+            <h2>{{ ikon('catatan') }} Catatan</h2>
+            <p class="keterangan-kecil">{{ b.catatan }}</p>
+        </div>
+        {% endif %}
+
+        {% if info.ukur %}
+        <div class="kartu">
+            <h2>{{ ikon('timbang') }} Pengukuran Terakhir</h2>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Tanggal</span>
+                    <span class="nilai">{{ info.ukur.tanggal|tgl_id }}</span></div>
+                <div class="baris"><span class="kunci">Umur saat diukur</span>
+                    <span class="nilai">{{ info.ukur.umur_hari|umur }}</span></div>
+                <div class="baris"><span class="kunci">Berat badan</span>
+                    <span class="nilai">{{ info.ukur.berat|angka(2) }} kg</span></div>
+                <div class="baris"><span class="kunci">Panjang/tinggi badan</span>
+                    <span class="nilai">{{ info.ukur.tinggi|angka(1) }} cm</span></div>
+                <div class="baris"><span class="kunci">Lingkar kepala</span>
+                    <span class="nilai">{{ info.ukur.lingkar_kepala|angka(1) if info.ukur.lingkar_kepala else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">Lingkar lengan (LiLA)</span>
+                    <span class="nilai">{{ info.ukur.lingkar_lengan|angka(1) if info.ukur.lingkar_lengan else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">Cara ukur</span>
+                    <span class="nilai">{{ info.ukur.cara_ukur|capitalize }}</span></div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if user.role == 'admin' %}
+        <div class="kartu">
+            <h2>{{ ikon('perisai') }} Zona Administrator</h2>
+            <p class="keterangan-kecil">
+                Menghapus data balita akan menghapus seluruh riwayat penimbangan
+                dan tindak lanjutnya. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <form method="post" action="{{ url_for('balita_hapus', balita_id=b.id) }}"
+                  data-konfirmasi="Hapus data {{ b.nama }} beserta SELURUH riwayat penimbangan dan tindak lanjutnya? Tindakan ini tidak dapat dibatalkan.">
+                <button type="submit" class="tombol bahaya penuh">
+                    {{ ikon('hapus') }} Hapus Data Balita
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

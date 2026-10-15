@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'balita' %}
+{% block judul %}Grafik Pertumbuhan{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Grafik Pertumbuhan (KMS Digital)</h1>
+        <div class="keterangan">
+            {{ b.nama }} &middot; {{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }} &middot;
+            {{ info.umur_teks }}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_detail', balita_id=b.id) }}" class="tombol sekunder">
+            {{ ikon('kembali') }} Kembali
+        </a>
+        <button type="button" class="tombol sekunder" onclick="window.print()">
+            {{ ikon('cetak') }} Cetak
+        </button>
+    </div>
+</div>
+
+<div class="kartu">
+    <div class="tab-indikator" id="tabIndikator">
+        <button type="button" class="aktif" data-indikator="lhfa">TB/U &mdash; Tinggi menurut Umur</button>
+        <button type="button" data-indikator="wfa">BB/U &mdash; Berat menurut Umur</button>
+        <button type="button" data-indikator="hcfa">LK/U &mdash; Lingkar Kepala menurut Umur</button>
+        <button type="button" data-indikator="wfh">BB/TB &mdash; Berat menurut Tinggi</button>
+    </div>
+
+    <div class="grafik-bungkus" id="wadahGrafik">
+        <div class="kosong" style="padding:40px">
+            <div class="judul">Memuat grafik&hellip;</div>
+        </div>
+    </div>
+
+    <p class="keterangan-kecil" style="margin-top:14px" id="keteranganGrafik"></p>
+</div>
+
+<div class="kisi kisi-2">
+    <div class="kartu kartu-tanpa-pad">
+        <div class="kartu-kepala"><h2>Data Titik Pengukuran</h2></div>
+        {% if riwayat %}
+        <div class="tabel-bungkus">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Umur</th>
+                        <th class="angka">BB (kg)</th>
+                        <th class="angka">TB (cm)</th>
+                        <th class="angka">Z TB/U</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in riwayat %}
+                    <tr>
+                        <td>{{ r.tanggal|tgl_id('pendek') }}</td>
+                        <td class="teks-lembut">{{ r.umur_hari|umur }}</td>
+                        <td class="angka">{{ r.berat|angka(2) }}</td>
+                        <td class="angka">{{ r.tinggi|angka(1) }}</td>
+                        <td class="angka">{{ r.z_lhfa|zscore if r.z_lhfa is not none else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="kosong"><div>Belum ada data pengukuran.</div></div>
+        {% endif %}
+    </div>
+
+    <div class="kartu">
+        <h2>{{ ikon('perisai') }} Cara Membaca Grafik</h2>
+        <div class="rincian">
+            <div class="baris"><span class="kunci" style="color:var(--normal);font-weight:700">Kurva median (0 SD)</span>
+                <span class="nilai">Nilai tengah anak sehat</span></div>
+            <div class="baris"><span class="kunci" style="color:var(--waspada);font-weight:700">&minus;2 SD</span>
+                <span class="nilai">Batas bawah normal</span></div>
+            <div class="baris"><span class="kunci" style="color:var(--bahaya);font-weight:700">&minus;3 SD</span>
+                <span class="nilai">Batas sangat kurang</span></div>
+        </div>
+        <hr class="pemisah">
+        <p class="keterangan-kecil">
+            Titik berwarna menunjukkan hasil pengukuran anak. Titik
+            <b style="color:var(--bahaya)">merah</b> berarti Z-Score di bawah &minus;2 SD
+            (stunting), <b style="color:var(--waspada)">oranye</b> berarti berisiko
+            (&minus;2 s.d. &minus;1,5 SD), dan <b style="color:var(--normal)">hijau</b> berarti normal.
+        </p>
+        <p class="keterangan-kecil">
+            Kurva rujukan dihitung dari parameter L-M-S resmi WHO Child Growth Standards (2006)
+            sesuai jenis kelamin anak.
+        </p>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block skrip %}
+<script src="{{ url_for('static', filename='js/grafik.js') }}"></script>
+<script>
+(function () {
+    var wadah = document.getElementById('wadahGrafik');
+    var keterangan = document.getElementById('keteranganGrafik');
+    var tab = document.getElementById('tabIndikator');
+    var alamat = "{{ url_for('api_grafik', balita_id=b.id) }}";
+
+    var KETERANGAN = {
+        lhfa: 'Indikator TB/U dipakai untuk menilai status stunting. Anak dinyatakan pendek bila Z-Score berada di bawah −2 SD.',
+        wfa: 'Indikator BB/U menilai berat badan menurut umur dan dipakai untuk mendeteksi berat badan kurang.',
+        hcfa: 'Indikator LK/U menilai pertumbuhan lingkar kepala, berguna untuk memantau perkembangan otak.',
+        wfh: 'Indikator BB/TB menilai proporsi berat terhadap tinggi badan dan dipakai untuk mendeteksi gizi kurang atau gizi lebih.'
+    };
+
+    function muat(indikator) {
+        wadah.innerHTML = '<div class="kosong" style="padding:40px"><div class="judul">Memuat grafik&hellip;</div></div>';
+        fetch(alamat + '?indikator=' + indikator)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    wadah.innerHTML = '<div class="kosong" style="padding:40px"><div>' +
+                        data.error + '</div></div>';
+                    return;
+                }
+                GrafikKMS.gambar(wadah, data, { tinggi: 430 });
+                keterangan.textContent = KETERANGAN[indikator] || '';
+            })
+            .catch(function () {
+                wadah.innerHTML = '<div class="kosong" style="padding:40px">' +
+                    '<div class="judul">Gagal memuat grafik</div>' +
+                    '<div>Periksa koneksi lalu muat ulang halaman.</div></div>';
+            });
+    }
+
+    tab.addEventListener('click', function (e) {
+        var tombol = e.target.closest('button[data-indikator]');
+        if (!tombol) return;
+        tab.querySelectorAll('button').forEach(function (b) { b.classList.remove('aktif'); });
+        tombol.classList.add('aktif');
+        muat(tombol.dataset.indikator);
+    });
+
+    muat('lhfa');
+})();
+</script>
+{% endblock %}

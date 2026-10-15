@@ -1,0 +1,110 @@
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Masuk &middot; {{ app_name }}</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="masuk-halaman">
+
+    {# ---------------- panel sambutan ---------------- #}
+    <section class="masuk-sambutan">
+        <div class="isi">
+            <img class="masuk-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Posyandu">
+
+            <div class="sapa">
+                Selamat Datang<br>
+                di <span class="sorot">E-Posyandu</span>
+            </div>
+
+            <div class="masuk-ciri">
+                <div class="baris">
+                    <span class="tanda">{{ ikon('timbangan') }}</span>
+                    <span>Pantau berat, tinggi, dan lingkar kepala balita secara berkala</span>
+                </div>
+                <div class="baris">
+                    <span class="tanda">{{ ikon('pertumbuhan') }}</span>
+                    <span>Deteksi dini risiko stunting dengan standar Z-Score WHO</span>
+                </div>
+                <div class="baris">
+                    <span class="tanda">{{ ikon('berkas-cetak') }}</span>
+                    <span>Laporan status gizi dan rekap posyandu siap cetak</span>
+                </div>
+                <div class="baris">
+                    <span class="tanda">{{ ikon('perisai') }}</span>
+                    <span>Data balita tersimpan aman dan terpusat</span>
+                </div>
+            </div>
+
+            <div class="masuk-identitas">
+                <strong>{{ identitas.nama }}</strong><br>
+                {{ identitas.wilayah }} &middot; {{ identitas.kecamatan }}<br>
+                {{ identitas.kabupaten }}, {{ identitas.provinsi }}
+            </div>
+        </div>
+    </section>
+
+    {# ---------------- panel formulir ---------------- #}
+    <section class="masuk-form">
+        <div class="masuk-kotak">
+            <div class="kepala">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Posyandu">
+                <h1>Masuk ke Sistem</h1>
+            </div>
+
+            {% with pesan = get_flashed_messages(with_categories=true) %}
+                {% if pesan %}
+                <div class="pesan-tumpuk">
+                    {% for kategori, teks in pesan %}
+                    <div class="pesan {{ kategori }}">
+                        <span class="ikon">{{ ikon('info' if kategori == 'info' else ('centang' if kategori == 'sukses' else ('seru' if kategori == 'peringatan' else 'silang'))) }}</span>
+                        <span>{{ teks }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="post" autocomplete="on">
+                <div class="medan">
+                    <label for="username">Nama Pengguna</label>
+                    <input type="text" id="username" name="username" placeholder="Masukkan nama pengguna"
+                           required autofocus autocomplete="username">
+                </div>
+
+                <div class="medan">
+                    <label for="password">Kata Sandi</label>
+                    <div class="sandi-bungkus">
+                        <input type="password" id="password" name="password"
+                               placeholder="Masukkan kata sandi" required
+                               autocomplete="current-password">
+                        <button type="button" class="sandi-lihat" id="lihatSandi"
+                                data-lihat-sandi="#password" aria-label="Tampilkan kata sandi">
+                            {{ ikon('lihat') }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lupa-sandi">
+                    <a href="#" id="lupaSandi">Lupa kata sandi?</a>
+                </div>
+
+                <button type="submit" class="tombol masuk penuh">
+                    {{ ikon('keluar') }} Masuk
+                </button>
+            </form>
+        </div>
+    </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

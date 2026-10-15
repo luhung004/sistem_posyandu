@@ -1,0 +1,82 @@
+{# ===========================================================================
+   Layar pembuka (splash screen) setelah berhasil masuk
+   =========================================================================== #}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memuat &middot; {{ app_name }}</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="splash" id="splash">
+    <span class="splash-gelembung g1"></span>
+    <span class="splash-gelembung g2"></span>
+    <span class="splash-gelembung g3"></span>
+    <span class="splash-gelembung g4"></span>
+
+    <div class="splash-isi">
+        <img class="splash-logo" src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Posyandu">
+
+        <div class="splash-nama">E-Posyandu Lestari 12</div>
+        <div class="splash-sub">Sistem Informasi Pemantauan dan Prediksi Dini Stunting</div>
+        <div class="splash-wilayah">{{ identitas.wilayah }} &middot; {{ identitas.kecamatan }} &middot; {{ identitas.kabupaten }}</div>
+
+        <div class="splash-sapa">
+            Selamat datang, <span class="gelar">{{ user.nama }}</span>
+            &nbsp;&middot;&nbsp; {{ user.jabatan or user.role }}
+        </div>
+
+        <div class="splash-muat"><div class="isi"></div></div>
+        <div class="splash-pesan" id="pesanMuat">
+            Menyiapkan data balita<span class="berkedip">...</span>
+        </div>
+
+        <div class="splash-masuk" id="masukCepat">
+            <a href="{{ tujuan }}">Lanjut ke sistem &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Pesan bergantian selama pemuatan
+(function () {
+    var pesan = [
+        "Menyiapkan data balita...",
+        "Memuat tabel rujukan WHO...",
+        "Menghitung status gizi...",
+        "Menyusun ringkasan posyandu..."
+    ];
+    var el = document.getElementById('pesanMuat');
+    var i = 0;
+    var timer = setInterval(function () {
+        i++;
+        if (i < pesan.length) {
+            el.textContent = pesan[i];
+        } else {
+            clearInterval(timer);
+        }
+    }, 620);
+
+    // Setelah animasi selesai, lanjutkan otomatis
+    var tujuan = {{ tujuan|tojson }};
+    setTimeout(function () {
+        document.getElementById('masukCepat').classList.add('tampil');
+    }, 2400);
+
+    setTimeout(function () {
+        document.getElementById('splash').classList.add('selesai');
+        setTimeout(function () { window.location.href = tujuan; }, 420);
+    }, 2900);
+})();
+</script>
+</body>
+</html>

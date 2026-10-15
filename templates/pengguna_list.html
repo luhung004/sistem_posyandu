@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'pengguna' %}
+{% block judul %}Manajemen Akun{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Manajemen Akun Pengguna</h1>
+        <div class="keterangan">
+            Kelola akun yang dapat mengakses sistem beserta perannya.
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('pengguna_tambah') }}" class="tombol">{{ ikon('tambah') }} Tambah Akun</a>
+    </div>
+</div>
+
+<div class="kartu kartu-tanpa-pad">
+    <div class="kartu-kepala">
+        <h2>Daftar Akun</h2>
+        <span class="keterangan-kecil">{{ rows|length }} akun</span>
+    </div>
+
+    <div class="tabel-bungkus">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Nama Pengguna</th>
+                    <th>Jabatan</th>
+                    <th>Peran</th>
+                    <th>Status</th>
+                    <th>Dibuat</th>
+                    <th class="tengah">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="nama-sel">{{ r.nama }}</td>
+                    <td><code>{{ r.username }}</code></td>
+                    <td class="teks-lembut">{{ r.jabatan or '-' }}</td>
+                    <td>
+                        <span class="lencana {{ 'tema' if r.role == 'admin' else ('cyan' if r.role == 'bidan' else 'hijau') }}">
+                            {{ r.role|capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="lencana {{ 'normal' if r.aktif else 'netral' }}">
+                            {{ 'Aktif' if r.aktif else 'Nonaktif' }}
+                        </span>
+                    </td>
+                    <td class="teks-lembut tanpa-bungkus">{{ r.dibuat|tgl_id('pendek') }}</td>
+                    <td class="tengah">
+                        <div class="fleks" style="justify-content:center;gap:5px">
+                            <a href="{{ url_for('pengguna_edit', user_id=r.id) }}"
+                               class="tombol kecil sekunder" title="Ubah">{{ ikon('ubah') }}</a>
+                            {% if r.id != user.id %}
+                            <form method="post" style="display:inline"
+                                  action="{{ url_for('pengguna_hapus', user_id=r.id) }}"
+                                  data-konfirmasi="Hapus akun {{ r.username }}?">
+                                <button type="submit" class="tombol kecil bahaya" title="Hapus">
+                                    {{ ikon('hapus') }}
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="kartu">
+    <h2>{{ ikon('perisai') }} Keterangan Peran</h2>
+    <div class="kisi kisi-3">
+        <div class="peringatan-item normal">
+            <span class="ikon">{{ ikon('setelan') }}</span>
+            <div>
+                <div class="judul">Administrator</div>
+                <p class="pesan">Akses penuh: mengelola akun, pengaturan sistem, serta seluruh data balita
+                termasuk menghapus data.</p>
+            </div>
+        </div>
+        <div class="peringatan-item normal" style="background:var(--cyan-muda);border-left-color:var(--cyan)">
+            <span class="ikon">{{ ikon('dokter') }}</span>
+            <div>
+                <div class="judul">Bidan</div>
+                <p class="pesan">Memantau status gizi, menganalisis prediksi dini, dan mencatat
+                tindak lanjut kasus balita.</p>
+            </div>
+        </div>
+        <div class="peringatan-item normal" style="background:var(--hijau-muda);border-left-color:var(--hijau)">
+            <span class="ikon">{{ ikon('anak') }}</span>
+            <div>
+                <div class="judul">Kader</div>
+                <p class="pesan">Mendaftarkan balita dan memasukkan hasil penimbangan bulanan
+                di posyandu.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

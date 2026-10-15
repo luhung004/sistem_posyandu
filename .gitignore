@@ -1,0 +1,32 @@
+# Basis data - dibuat otomatis saat runtime dari schema.sql + seed.py
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.Python
+
+# Virtualenv
+.venv/
+venv/
+env/
+
+# Rahasia / konfigurasi lokal
+.env
+*.pem
+*.key
+
+# Log & OS
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'balita' %}
+{% block judul %}Data Balita{% endblock %}
+
+{% block isi %}
+
+<div class="halaman-balita">
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Data Balita</h1>
+        <div class="keterangan">
+            Daftar balita yang terdaftar di {{ identitas.nama }} beserta status gizi terkini.
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_tambah') }}" class="tombol">{{ ikon('tambah') }} Tambah Balita</a>
+    </div>
+</div>
+
+<div class="kartu">
+    <form method="get" class="bilah-cari">
+        <div class="bidang" style="flex:1;min-width:220px">
+            <label for="q">Cari balita</label>
+            <input type="text" id="q" name="q" value="{{ cari }}"
+                   placeholder="Nama balita, nama ibu, atau nama ayah">
+        </div>
+        <div class="bidang">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                <option value="" {{ 'selected' if not status }}>Semua status</option>
+                <option value="stunting" {{ 'selected' if status == 'stunting' }}>Stunting (TB/U &lt; &minus;2 SD)</option>
+                <option value="risiko" {{ 'selected' if status == 'risiko' }}>Berisiko (&minus;2 s.d. &minus;1,5 SD)</option>
+                <option value="normal" {{ 'selected' if status == 'normal' }}>Normal</option>
+                <option value="belum" {{ 'selected' if status == 'belum' }}>Belum diukur</option>
+            </select>
+        </div>
+        <button type="submit" class="tombol sekunder">{{ ikon('cari') }} Terapkan</button>
+        {% if cari or status %}
+        <a href="{{ url_for('balita_list') }}" class="tombol sekunder">Bersihkan</a>
+        {% endif %}
+    </form>
+</div>
+
+<div class="kartu kartu-tanpa-pad">
+    <div class="kartu-kepala">
+        <h2>Daftar Balita</h2>
+        <span class="keterangan-kecil">{{ daftar|length }} balita ditemukan</span>
+    </div>
+
+    {% if daftar %}
+    <div class="tabel-bungkus">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Nama Balita</th>
+                    <th>L/P</th>
+                    <th>Umur</th>
+                    <th>Nama Ibu</th>
+                    <th class="angka">BB (kg)</th>
+                    <th class="angka">TB (cm)</th>
+                    <th class="angka">BB/U</th>
+                    <th class="angka">TB/U</th>
+                    <th>Status Stunting</th>
+                    <th>Penimbangan Terakhir</th>
+                    <th class="tengah">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in daftar %}
+                {% set u = d.ukur %}
+                <tr>
+                    <td class="nama-sel">
+                        <a href="{{ url_for('balita_detail', balita_id=d.balita.id) }}">{{ d.balita.nama }}</a>
+                    </td>
+                    <td>{{ 'L' if d.balita.sex == 'M' else 'P' }}</td>
+                    <td class="tanpa-bungkus">{{ d.umur_teks }}</td>
+                    <td class="teks-lembut">{{ d.balita.nama_ibu or '-' }}</td>
+                    <td class="angka">{{ u.berat|angka(2) if u else '-' }}</td>
+                    <td class="angka">{{ u.tinggi|angka(1) if u else '-' }}</td>
+                    <td class="angka">{{ d.z_wfa|zscore if d.z_wfa is not none else '-' }}</td>
+                    <td class="angka">{{ d.z_lhfa|zscore if d.z_lhfa is not none else '-' }}</td>
+                    <td>
+                        <span class="lencana {{ status_lencana(d.z_lhfa) }}">
+                            {{ d.stunting.label }}
+                        </span>
+                    </td>
+                    <td class="teks-lembut tanpa-bungkus">
+                        {{ u.tanggal|tgl_id('pendek') if u else 'Belum ada' }}
+                    </td>
+                    <td class="tengah">
+                        <div class="fleks" style="justify-content:center;gap:5px">
+                            <a href="{{ url_for('pengukuran_tambah', balita_id=d.balita.id) }}"
+                               class="tombol kecil hijau" title="Timbang">{{ ikon('timbang') }}</a>
+                            <a href="{{ url_for('kms', balita_id=d.balita.id) }}"
+                               class="tombol kecil sekunder" title="Grafik pertumbuhan">{{ ikon('grafik') }}</a>
+                            <a href="{{ url_for('balita_edit', balita_id=d.balita.id) }}"
+                               class="tombol kecil sekunder" title="Ubah data">{{ ikon('ubah') }}</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="kosong">
+        {{ ikon('cari') }}
+        <div class="judul">Tidak ada data balita</div>
+        <div>
+            {% if cari or status %}
+                Tidak ditemukan balita yang sesuai dengan pencarian atau status yang dipilih.
+            {% else %}
+                Belum ada balita yang terdaftar. Mulai dengan menambahkan data balita baru.
+            {% endif %}
+        </div>
+        <div style="margin-top:16px">
+            <a href="{{ url_for('balita_tambah') }}" class="tombol">{{ ikon('tambah') }} Tambah Balita</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+</div>
+
+{% endblock %}

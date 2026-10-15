@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'dashboard' %}
+{% block judul %}Beranda{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Beranda</h1>
+        <div class="keterangan">
+            Ringkasan pemantauan tumbuh kembang dan risiko stunting balita
+            hingga {{ hari_ini|tgl_id }}.
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_tambah') }}" class="tombol">{{ ikon('tambah') }} Tambah Balita</a>
+        <a href="{{ url_for('prediksi_list') }}" class="tombol sekunder">{{ ikon('prediksi') }} Prediksi Dini</a>
+    </div>
+</div>
+
+{# ---------------- kartu statistik ---------------- #}
+<div class="kisi kisi-4 mb-3">
+    <div class="stat">
+        <div class="label">Total Balita</div>
+        <div class="nilai">{{ total_balita }}</div>
+        <div class="kecil">terdaftar &amp; aktif</div>
+    </div>
+    <div class="stat bahaya">
+        <div class="label">Terdeteksi Stunting</div>
+        <div class="nilai">{{ n_pendek + n_sangat }}</div>
+        <div class="kecil">
+            {{ n_pendek }} pendek &middot; {{ n_sangat }} sangat pendek
+            ({{ persen_stunting }}%)
+        </div>
+    </div>
+    <div class="stat hijau">
+        <div class="label">Pertumbuhan Normal</div>
+        <div class="nilai">{{ n_normal }}</div>
+        <div class="kecil">TB/U berada pada &minus;2 SD atau lebih</div>
+    </div>
+    <div class="stat cyan">
+        <div class="label">Ditimbang Bulan Ini</div>
+        <div class="nilai">{{ bulan_ini }}</div>
+        <div class="kecil">
+            dari {{ total_balita }} balita
+            {%- if total_balita %} ({{ (bulan_ini / total_balita * 100)|round(0)|int }}%){% endif %}
+        </div>
+    </div>
+</div>
+
+{% if n_belum %}
+<div class="pesan info mb-3">
+    <span class="ikon">{{ ikon('info') }}</span>
+    <span>Sebanyak <b>{{ n_belum }} balita</b> belum memiliki data pengukuran, sehingga status gizinya
+    belum dapat dinilai. Silakan lengkapi data penimbangan.</span>
+</div>
+{% endif %}
+
+<div class="kisi kisi-2-1">
+
+    {# ---------------- daftar prioritas ---------------- #}
+    <div>
+        <div class="kartu kartu-tanpa-pad">
+            <div class="kartu-kepala">
+                <h2>{{ ikon('seru') }} Perlu Perhatian</h2>
+                <a href="{{ url_for('prediksi_list') }}" class="tombol kecil sekunder">Lihat semua</a>
+            </div>
+
+            {% if waspada %}
+                {% for r in waspada %}
+                <a href="{{ url_for('balita_detail', balita_id=r.id) }}" class="baris-balita">
+                    <div class="avatar-anak {{ 'laki' if r.sex == 'M' else 'perempuan' }}">
+                        {{ r.nama[0]|upper }}
+                    </div>
+                    <div class="info">
+                        <div class="nama">{{ r.nama }}</div>
+                        <div class="meta">
+                            {{ 'Laki-laki' if r.sex == 'M' else 'Perempuan' }} &middot;
+                            {{ umur_terakhir_balita(r) }}
+                            &middot; TB/U {{ r.z_lhfa|zscore }}
+                        </div>
+                    </div>
+                    <span class="lencana {{ status_lencana(r.z_lhfa) }}">
+                        {{ 'Stunting' if r.z_lhfa < -2 else 'Berisiko' }}
+                    </span>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="kosong">
+                    {{ ikon('centang') }}
+                    <div class="judul">Tidak ada balita yang perlu perhatian khusus</div>
+                    <div>Seluruh balita berada pada status pertumbuhan yang baik.</div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# ---------------- tren penimbangan ---------------- #}
+        <div class="kartu">
+            <h2>{{ ikon('grafik') }} Jumlah Penimbangan 6 Bulan Terakhir</h2>
+            <div class="keterangan-kecil mb-2">
+                Banyaknya balita yang ditimbang setiap bulan di Posyandu Lestari 12.
+            </div>
+            {% set maks = tren_bulanan|map(attribute='jumlah')|max %}
+            <div class="grafik-kolom">
+                {% for t in tren_bulanan %}
+                <div class="grafik-batang{{ ' tanpa-data' if not t.jumlah }}">
+                    <div class="tumbuh">
+                        <div class="jalur">
+                            <div class="lengan">
+                                <div class="titik-angka tebal">{{ t.jumlah }}</div>
+                                <div class="balok" style="height:{{ (t.jumlah / maks * 140)|round(0)|int if maks else 0 }}px"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sumbu">{{ t.label }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ---------------- kolom samping ---------------- #}
+    <div>
+        <div class="kartu">
+            <h2>{{ ikon('grafik') }} Status Stunting</h2>
+            <div class="keterangan-kecil mb-2">Berdasarkan indikator TB/U (tinggi badan menurut umur).</div>
+
+            {% set jml = n_normal + n_pendek + n_sangat + n_belum %}
+            {% set baris = [
+                ('Normal', n_normal, 'normal'),
+                ('Pendek', n_pendek, 'waspada'),
+                ('Sangat Pendek', n_sangat, 'bahaya'),
+                ('Belum Diukur', n_belum, 'netral')
+            ] %}
+            {% for nama, nilai, warna in baris %}
+            <div class="batang-bulat">
+                <div class="baris-isi">
+                    <span class="nama">{{ nama }}</span>
+                    <span class="jml">
+                        {{ nilai }} <span class="persen">({{ (nilai / jml * 100)|round(1) if jml else 0 }}%)</span>
+                    </span>
+                </div>
+                <div class="dasar">
+                    <div class="takar {{ warna }}" style="width:{{ (nilai / jml * 100)|round(1) if jml else 0 }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <hr class="pemisah">
+            <div class="rincian">
+                <div class="baris">
+                    <span class="kunci">Prevalensi stunting</span>
+                    <span class="nilai">{{ persen_stunting }}%</span>
+                </div>
+                <div class="baris">
+                    <span class="kunci">Total balita</span>
+                    <span class="nilai">{{ total_balita }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="kartu">
+            <h2>{{ ikon('anak') }} Sebaran Umur</h2>
+            <div class="rincian">
+                {% for kelompok, jumlah in umur_kelompok.items() %}
+                <div class="baris">
+                    <span class="kunci">{{ kelompok }}</span>
+                    <span class="nilai">{{ jumlah }} balita</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="kartu">
+            <h2>{{ ikon('perisai') }} Standar Penilaian</h2>
+            <p class="keterangan-kecil">
+                Status gizi dihitung menggunakan <b>Z-Score WHO Child Growth Standards (2006)</b>
+                dengan indikator BB/U, TB/U, BB/TB, dan LK/U. Ambang batas klasifikasi mengikuti
+                <b>Standar Antropometri Anak Kementerian Kesehatan RI</b>.
+            </p>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Pendek (stunted)</span><span class="nilai">TB/U &lt; &minus;2 SD</span></div>
+                <div class="baris"><span class="kunci">Sangat pendek</span><span class="nilai">TB/U &lt; &minus;3 SD</span></div>
+                <div class="baris"><span class="kunci">Gizi kurang</span><span class="nilai">BB/U &lt; &minus;2 SD</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

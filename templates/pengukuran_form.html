@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'pengukuran' %}
+{% block judul %}Penimbangan{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Penimbangan Balita</h1>
+        <div class="keterangan">
+            {{ b.nama }} &middot; {{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }} &middot;
+            lahir {{ b.birth_date|tgl_id('pendek') }}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_detail', balita_id=b.id) }}" class="tombol sekunder">
+            {{ ikon('kembali') }} Kembali
+        </a>
+    </div>
+</div>
+
+<form method="post">
+    <div class="kisi kisi-2-1">
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('timbang') }} Hasil Pengukuran</h2>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="tanggal">Tanggal Pengukuran <span class="wajib">*</span></label>
+                        <input type="date" id="tanggal" name="tanggal" required
+                               value="{{ data.tanggal }}" max="{{ hari_ini }}">
+                    </div>
+                    <div class="form-baris">
+                        <label>Cara Pengukuran</label>
+                        <div class="radio-grup">
+                            <label class="radio-kotak">
+                                <input type="radio" name="cara_ukur" value="berbaring"
+                                       {{ 'checked' if data.cara_ukur != 'berdiri' }}>
+                                Berbaring
+                            </label>
+                            <label class="radio-kotak">
+                                <input type="radio" name="cara_ukur" value="berdiri"
+                                       {{ 'checked' if data.cara_ukur == 'berdiri' }}>
+                                Berdiri
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pesan info mb-2">
+                    <span class="ikon">{{ ikon('kalender') }}</span>
+                    <span id="infoUmur"
+                          data-umur-ukur
+                          data-tanggal="#tanggal"
+                          data-lahir="#tglLahir"></span>
+                </div>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="berat">Berat Badan <span class="wajib">*</span></label>
+                        <div class="pilihan-satuan">
+                            <input type="number" id="berat" name="berat" step="0.01" min="0.5" max="40"
+                                   required value="{{ data.berat if data.berat is defined else '' }}"
+                                   placeholder="9.5">
+                            <span class="satuan">kg</span>
+                        </div>
+                    </div>
+                    <div class="form-baris">
+                        <label for="tinggi">Panjang / Tinggi Badan <span class="wajib">*</span></label>
+                        <div class="pilihan-satuan">
+                            <input type="number" id="tinggi" name="tinggi" step="0.1" min="30" max="130"
+                                   required value="{{ data.tinggi if data.tinggi is defined else '' }}"
+                                   placeholder="78.5">
+                            <span class="satuan">cm</span>
+                        </div>
+                    </div>
+                    <div class="form-baris">
+                        <label for="lingkar_kepala">Lingkar Kepala <span class="bantuan">(opsional)</span></label>
+                        <div class="pilihan-satuan">
+                            <input type="number" id="lingkar_kepala" name="lingkar_kepala" step="0.1" min="20" max="65"
+                                   value="{{ data.lingkar_kepala if data.lingkar_kepala is defined else '' }}"
+                                   placeholder="46">
+                            <span class="satuan">cm</span>
+                        </div>
+                    </div>
+                    <div class="form-baris">
+                        <label for="lingkar_lengan">Lingkar Lengan Atas (LiLA) <span class="bantuan">(opsional)</span></label>
+                        <div class="pilihan-satuan">
+                            <input type="number" id="lingkar_lengan" name="lingkar_lengan" step="0.1" min="5" max="30"
+                                   value="{{ data.lingkar_lengan if data.lingkar_lengan is defined else '' }}"
+                                   placeholder="14.5">
+                            <span class="satuan">cm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="catatan">Catatan</label>
+                    <textarea id="catatan" name="catatan" rows="2"
+                              placeholder="Kondisi balita saat penimbangan, keluhan, atau informasi lain">{{ data.catatan if data.catatan is defined else '' }}</textarea>
+                </div>
+
+                <input type="hidden" id="tglLahir" value="{{ b.birth_date }}">
+            </div>
+
+            <div class="kartu">
+                <h2>{{ ikon('perisai') }} Tentang Perhitungan</h2>
+                <p class="keterangan-kecil">
+                    Setelah data disimpan, sistem menghitung Z-Score secara otomatis menggunakan
+                    <b>WHO Child Growth Standards (2006)</b> dengan parameter L-M-S resmi WHO, untuk
+                    indikator:
+                </p>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">BB/U</span><span class="nilai">Berat badan menurut umur</span></div>
+                    <div class="baris"><span class="kunci">TB/U</span><span class="nilai">Panjang/tinggi badan menurut umur</span></div>
+                    <div class="baris"><span class="kunci">BB/TB atau BB/PB</span><span class="nilai">Berat menurut tinggi/panjang badan</span></div>
+                    <div class="baris"><span class="kunci">LK/U</span><span class="nilai">Lingkar kepala menurut umur</span></div>
+                </div>
+                <p class="keterangan-kecil" style="margin-top:12px">
+                    Cara pengukuran menentukan tabel yang dipakai: anak di bawah 2 tahun yang diukur
+                    <b>berbaring</b> dinilai dengan BB/PB, sedangkan anak yang diukur <b>berdiri</b>
+                    dinilai dengan BB/TB.
+                </p>
+            </div>
+        </div>
+
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('anak') }} Balita</h2>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">Nama</span><span class="nilai">{{ b.nama }}</span></div>
+                    <div class="baris"><span class="kunci">Jenis kelamin</span>
+                        <span class="nilai">{{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }}</span></div>
+                    <div class="baris"><span class="kunci">Tanggal lahir</span>
+                        <span class="nilai">{{ b.birth_date|tgl_id('pendek') }}</span></div>
+                    <div class="baris"><span class="kunci">Umur</span>
+                        <span class="nilai">{{ umur_terakhir_balita(b) }}</span></div>
+                </div>
+            </div>
+
+            {% set ukur = ukur_terakhir(b.id) %}
+            {% if ukur %}
+            <div class="kartu">
+                <h2>{{ ikon('grafik') }} Penimbangan Sebelumnya</h2>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">Tanggal</span>
+                        <span class="nilai">{{ ukur.tanggal|tgl_id('pendek') }}</span></div>
+                    <div class="baris"><span class="kunci">Berat badan</span>
+                        <span class="nilai">{{ ukur.berat|angka(2) }} kg</span></div>
+                    <div class="baris"><span class="kunci">Panjang/tinggi badan</span>
+                        <span class="nilai">{{ ukur.tinggi|angka(1) }} cm</span></div>
+                    <div class="baris"><span class="kunci">Z BB/U</span>
+                        <span class="nilai">{{ ukur.z_wfa|zscore if ukur.z_wfa is not none else '-' }}</span></div>
+                    <div class="baris"><span class="kunci">Z TB/U</span>
+                        <span class="nilai">{{ ukur.z_lhfa|zscore if ukur.z_lhfa is not none else '-' }}</span></div>
+                </div>
+                <p class="keterangan-kecil" style="margin-top:10px">
+                    Bandingkan dengan hasil pengukuran baru untuk melihat arah pertumbuhan.
+                </p>
+            </div>
+            {% endif %}
+
+            <div class="kartu">
+                <div class="form-aksi" style="border-top:none;margin-top:0;padding-top:0">
+                    <button type="submit" class="tombol hijau penuh">
+                        {{ ikon('centang') }} Simpan &amp; Hitung Z-Score
+                    </button>
+                    <a href="{{ url_for('balita_detail', balita_id=b.id) }}" class="tombol sekunder penuh">
+                        Batal
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

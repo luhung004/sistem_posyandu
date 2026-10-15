@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'balita' %}
+{% block judul %}{{ 'Ubah Data Balita' if mode == 'edit' else 'Tambah Balita' }}{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>{{ 'Ubah Data Balita' if mode == 'edit' else 'Tambah Data Balita' }}</h1>
+        <div class="keterangan">
+            {% if mode == 'edit' %}
+                Perbarui identitas dan data pendukung balita.
+            {% else %}
+                Lengkapi identitas balita beserta data orang tua dan riwayat kelahiran.
+            {% endif %}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('balita_detail', balita_id=b.id) if mode == 'edit' else url_for('balita_list') }}"
+           class="tombol sekunder">{{ ikon('kembali') }} Kembali</a>
+    </div>
+</div>
+
+<form method="post">
+    <div class="kisi kisi-2-1">
+        <div>
+            {# ---------------- identitas balita ---------------- #}
+            <div class="kartu">
+                <h2>{{ ikon('anak') }} Identitas Balita</h2>
+
+                <div class="form-baris">
+                    <label for="nama">Nama Lengkap Balita <span class="wajib">*</span></label>
+                    <input type="text" id="nama" name="nama" required
+                           value="{{ data.nama if data.nama is defined and data.nama else '' }}"
+                           placeholder="Nama sesuai akta kelahiran">
+                </div>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label>Jenis Kelamin <span class="wajib">*</span></label>
+                        <div class="radio-grup">
+                            <label class="radio-kotak">
+                                <input type="radio" name="sex" value="M" required
+                                       {{ 'checked' if data.sex == 'M' }}>
+                                Laki-laki
+                            </label>
+                            <label class="radio-kotak">
+                                <input type="radio" name="sex" value="F"
+                                       {{ 'checked' if data.sex == 'F' }}>
+                                Perempuan
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-baris">
+                        <label for="birth_date">Tanggal Lahir <span class="wajib">*</span></label>
+                        <input type="date" id="birth_date" name="birth_date" required
+                               value="{{ data.birth_date if data.birth_date is defined and data.birth_date else '' }}"
+                               max="{{ hari_ini }}">
+                    </div>
+                </div>
+
+                <div class="pesan info" style="margin-top:2px">
+                    <span class="ikon">{{ ikon('kalender') }}</span>
+                    <span data-umur-lahir data-lahir="#birth_date"></span>
+                </div>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="nik">NIK Balita <span class="bantuan">(opsional)</span></label>
+                        <input type="text" id="nik" name="nik" maxlength="16"
+                               value="{{ data.nik if data.nik is defined and data.nik else '' }}"
+                               placeholder="16 digit angka">
+                    </div>
+                    <div class="form-baris">
+                        <label for="no_kk">Nomor Kartu Keluarga <span class="bantuan">(opsional)</span></label>
+                        <input type="text" id="no_kk" name="no_kk" maxlength="16"
+                               value="{{ data.no_kk if data.no_kk is defined and data.no_kk else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            {# ---------------- orang tua / wali ---------------- #}
+            <div class="kartu">
+                <h2>{{ ikon('pengguna') }} Data Orang Tua</h2>
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="nama_ibu">Nama Ibu</label>
+                        <input type="text" id="nama_ibu" name="nama_ibu"
+                               value="{{ data.nama_ibu if data.nama_ibu is defined and data.nama_ibu else '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="nama_ayah">Nama Ayah</label>
+                        <input type="text" id="nama_ayah" name="nama_ayah"
+                               value="{{ data.nama_ayah if data.nama_ayah is defined and data.nama_ayah else '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="no_hp">Nomor Telepon <span class="bantuan">(opsional)</span></label>
+                        <input type="tel" id="no_hp" name="no_hp"
+                               value="{{ data.no_hp if data.no_hp is defined and data.no_hp else '' }}"
+                               placeholder="08xxxxxxxxxx">
+                    </div>
+                    <div class="form-baris">
+                        <label for="asi_eksklusif">Riwayat ASI Eksklusif</label>
+                        <select id="asi_eksklusif" name="asi_eksklusif">
+                            <option value="">Belum diketahui</option>
+                            <option value="1" {{ 'selected' if data.asi_eksklusif == 1 }}>Ya, ASI eksklusif 6 bulan</option>
+                            <option value="0" {{ 'selected' if data.asi_eksklusif == 0 }}>Tidak / kurang dari 6 bulan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="alamat">Alamat</label>
+                    <textarea id="alamat" name="alamat" rows="2"
+                              placeholder="Dusun / jalan, desa, kecamatan">{{ data.alamat if data.alamat is defined and data.alamat else '' }}</textarea>
+                </div>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="rt">RT</label>
+                        <input type="text" id="rt" name="rt" maxlength="3"
+                               value="{{ data.rt if data.rt is defined and data.rt else '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="rw">RW</label>
+                        <input type="text" id="rw" name="rw" maxlength="3"
+                               value="{{ data.rw if data.rw is defined and data.rw else '' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ---------------- kolom samping ---------------- #}
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('jantung') }} Data Kelahiran &amp; Ibu</h2>
+                <p class="keterangan-kecil">
+                    Data ini digunakan sebagai faktor pendukung pemantauan tumbuh kembang.
+                </p>
+
+                <div class="form-baris">
+                    <label for="bb_lahir">Berat Badan Lahir</label>
+                    <div class="pilihan-satuan">
+                        <input type="number" id="bb_lahir" name="bb_lahir" step="0.01" min="0.5" max="7"
+                               value="{{ data.bb_lahir if data.bb_lahir is defined and data.bb_lahir else '' }}"
+                               placeholder="3.2">
+                        <span class="satuan">kg</span>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="pb_lahir">Panjang Badan Lahir</label>
+                    <div class="pilihan-satuan">
+                        <input type="number" id="pb_lahir" name="pb_lahir" step="0.1" min="20" max="70"
+                               value="{{ data.pb_lahir if data.pb_lahir is defined and data.pb_lahir else '' }}"
+                               placeholder="49">
+                        <span class="satuan">cm</span>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="tinggi_ibu">Tinggi Badan Ibu</label>
+                    <div class="pilihan-satuan">
+                        <input type="number" id="tinggi_ibu" name="tinggi_ibu" step="0.1" min="100" max="200"
+                               value="{{ data.tinggi_ibu if data.tinggi_ibu is defined and data.tinggi_ibu else '' }}"
+                               placeholder="155">
+                        <span class="satuan">cm</span>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="berat_ibu_hamil">Berat Badan Ibu Saat Hamil</label>
+                    <div class="pilihan-satuan">
+                        <input type="number" id="berat_ibu_hamil" name="berat_ibu_hamil" step="0.1" min="30" max="150"
+                               value="{{ data.berat_ibu_hamil if data.berat_ibu_hamil is defined and data.berat_ibu_hamil else '' }}"
+                               placeholder="58">
+                        <span class="satuan">kg</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="kartu">
+                <h2>{{ ikon('catatan') }} Catatan</h2>
+                <textarea name="catatan" rows="4"
+                          placeholder="Catatan tambahan mengenai kondisi balita">{{ data.catatan if data.catatan is defined and data.catatan else '' }}</textarea>
+            </div>
+
+            <div class="kartu">
+                <div class="form-aksi" style="border-top:none;margin-top:0;padding-top:0">
+                    <button type="submit" class="tombol penuh">
+                        {{ ikon('centang') }} {{ 'Simpan Perubahan' if mode == 'edit' else 'Simpan Data Balita' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

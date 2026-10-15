@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'pengukuran' %}
+{% block judul %}Penimbangan{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Data Penimbangan</h1>
+        <div class="keterangan">
+            Daftar hasil penimbangan pada rentang tanggal yang dipilih.
+        </div>
+    </div>
+</div>
+
+<div class="kartu">
+    <form method="get" class="bilah-cari">
+        <div class="bidang">
+            <label for="dari">Dari tanggal</label>
+            <input type="date" id="dari" name="dari" value="{{ awal }}">
+        </div>
+        <div class="bidang">
+            <label for="sampai">Sampai tanggal</label>
+            <input type="date" id="sampai" name="sampai" value="{{ sampai }}">
+        </div>
+        <button type="submit" class="tombol sekunder">{{ ikon('cari') }} Tampilkan</button>
+    </form>
+</div>
+
+<div class="kartu kartu-tanpa-pad">
+    <div class="kartu-kepala">
+        <h2>Hasil Penimbangan</h2>
+        <span class="keterangan-kecil">{{ rows|length }} catatan</span>
+    </div>
+
+    {% if rows %}
+    <div class="tabel-bungkus">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Nama Balita</th>
+                    <th>L/P</th>
+                    <th>Umur</th>
+                    <th class="angka">BB (kg)</th>
+                    <th class="angka">TB (cm)</th>
+                    <th class="angka">LK (cm)</th>
+                    <th class="angka">LiLA (cm)</th>
+                    <th class="angka">BB/U</th>
+                    <th class="angka">TB/U</th>
+                    <th>Status Stunting</th>
+                    <th class="tengah">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td class="tanpa-bungkus">{{ r.tanggal|tgl_id('pendek') }}</td>
+                    <td class="nama-sel">
+                        <a href="{{ url_for('balita_detail', balita_id=r.balita_id) }}">{{ r.nama }}</a>
+                    </td>
+                    <td>{{ 'L' if r.sex == 'M' else 'P' }}</td>
+                    <td class="tanpa-bungkus teks-lembut">{{ r.umur_hari|umur }}</td>
+                    <td class="angka">{{ r.berat|angka(2) }}</td>
+                    <td class="angka">{{ r.tinggi|angka(1) }}</td>
+                    <td class="angka">{{ r.lingkar_kepala|angka(1) }}</td>
+                    <td class="angka">{{ r.lingkar_lengan|angka(1) }}</td>
+                    <td class="angka">{{ r.z_wfa|zscore if r.z_wfa is not none else '-' }}</td>
+                    <td class="angka">{{ r.z_lhfa|zscore if r.z_lhfa is not none else '-' }}</td>
+                    <td><span class="lencana {{ status_lencana(r.z_lhfa) }}">{{ growth_label('lhfa', r.z_lhfa) }}</span></td>
+                    <td class="tengah">
+                        <a href="{{ url_for('balita_detail', balita_id=r.balita_id) }}"
+                           class="tombol kecil sekunder" title="Lihat balita">{{ ikon('lihat') }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="kosong">
+        {{ ikon('timbang') }}
+        <div class="judul">Belum ada data penimbangan</div>
+        <div>Tidak ada penimbangan tercatat pada rentang tanggal tersebut.</div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

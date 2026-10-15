@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'laporan' %}
+{% block judul %}Laporan{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Laporan Status Gizi</h1>
+        <div class="keterangan">
+            Rekapitulasi status gizi dan stunting balita {{ identitas.nama }}
+            periode {{ dari|tgl_id }} sampai {{ sampai|tgl_id }}.
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('laporan_export', dari=dari, sampai=sampai) }}" class="tombol hijau">
+            {{ ikon('unduh') }} Unduh CSV
+        </a>
+        <a href="{{ url_for('laporan_cetak', dari=dari, sampai=sampai) }}" target="_blank" class="tombol">
+            {{ ikon('cetak') }} Cetak / PDF
+        </a>
+    </div>
+</div>
+
+<div class="kartu tanpa-cetak">
+    <form method="get" class="bilah-cari">
+        <div class="bidang">
+            <label for="dari">Dari tanggal</label>
+            <input type="date" id="dari" name="dari" value="{{ dari }}">
+        </div>
+        <div class="bidang">
+            <label for="sampai">Sampai tanggal</label>
+            <input type="date" id="sampai" name="sampai" value="{{ sampai }}">
+        </div>
+        <button type="submit" class="tombol">{{ ikon('cari') }} Tampilkan Laporan</button>
+    </form>
+</div>
+
+{# ---------------- ringkasan angka ---------------- #}
+<div class="kisi kisi-4 mb-3">
+    <div class="stat">
+        <div class="label">Jumlah Balita</div>
+        <div class="nilai">{{ rekap.total }}</div>
+        <div class="kecil">dinilai pada periode ini</div>
+    </div>
+    <div class="stat bahaya">
+        <div class="label">Stunting</div>
+        <div class="nilai">{{ rekap.stunting }}</div>
+        <div class="kecil">
+            {{ rekap.pendek }} pendek &middot; {{ rekap.sangat_pendek }} sangat pendek
+            ({{ rekap.persen_stunting }}%)
+        </div>
+    </div>
+    <div class="stat hijau">
+        <div class="label">Normal</div>
+        <div class="nilai">{{ rekap.normal }}</div>
+        <div class="kecil">TB/U pada &minus;2 SD atau lebih</div>
+    </div>
+    <div class="stat oranye">
+        <div class="label">Gizi Kurang (BB/U)</div>
+        <div class="nilai">{{ rekap.gizi_kurang }}</div>
+        <div class="kecil">
+            {% if rekap.belum_ukur %}{{ rekap.belum_ukur }} balita belum diukur{% else %}seluruh balita terukur{% endif %}
+        </div>
+    </div>
+</div>
+
+{# ---------------- tabel rinci ---------------- #}
+<div class="kartu kartu-tanpa-pad">
+    <div class="kartu-kepala">
+        <h2>Rincian Status Gizi per Balita</h2>
+        <span class="keterangan-kecil">Data pengukuran terakhir dalam periode</span>
+    </div>
+
+    {% if hasil %}
+    <div class="tabel-bungkus">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Balita</th>
+                    <th>L/P</th>
+                    <th>Umur</th>
+                    <th>Nama Ibu</th>
+                    <th>Tgl Ukur</th>
+                    <th class="angka">BB (kg)</th>
+                    <th class="angka">TB (cm)</th>
+                    <th class="angka">Z BB/U</th>
+                    <th class="angka">Z TB/U</th>
+                    <th class="angka">Z BB/TB</th>
+                    <th>Status Gizi</th>
+                    <th>Status Stunting</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for x in hasil %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="nama-sel">{{ x.nama }}</td>
+                    <td>{{ 'L' if x.sex == 'M' else 'P' }}</td>
+                    <td class="tanpa-bungkus">{{ x.umur_kini|umur }}</td>
+                    <td class="teks-lembut">{{ x.nama_ibu or '-' }}</td>
+                    <td class="tanpa-bungkus">{{ x.tanggal|tgl_id('pendek') }}</td>
+                    <td class="angka">{{ x.berat|angka(2) }}</td>
+                    <td class="angka">{{ x.tinggi|angka(1) }}</td>
+                    <td class="angka">{{ x.z_wfa|zscore if x.z_wfa is not none else '-' }}</td>
+                    <td class="angka">{{ x.z_lhfa|zscore if x.z_lhfa is not none else '-' }}</td>
+                    <td class="angka">{{ x.z_wfh|zscore if x.z_wfh is not none else '-' }}</td>
+                    <td>{{ x.status_gizi or '-' }}</td>
+                    <td>
+                        <span class="lencana {{ status_lencana(x.z_lhfa) }}">{{ x.stunting.label }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="kosong">
+        {{ ikon('laporan') }}
+        <div class="judul">Belum ada data pada periode ini</div>
+        <div>Ubah rentang tanggal, atau tambahkan data penimbangan terlebih dahulu.</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="kartu">
+    <h2>{{ ikon('perisai') }} Dasar Perhitungan Laporan</h2>
+    <p class="keterangan-kecil">
+        Seluruh Z-Score pada laporan ini dihitung dengan rumus WHO Child Growth Standards (2006)
+        memakai parameter L-M-S resmi WHO, dan diklasifikasikan menurut
+        Standar Antropometri Anak Kementerian Kesehatan RI. Data yang ditampilkan adalah
+        hasil pengukuran terakhir setiap balita dalam rentang tanggal yang dipilih.
+        Balita tanpa pengukuran pada periode tersebut tidak disertakan.
+    </p>
+</div>
+
+{% endblock %}

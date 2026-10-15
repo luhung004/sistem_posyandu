@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'prediksi' %}
+{% block judul %}Analisis Prediksi{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Analisis Prediksi Dini</h1>
+        <div class="keterangan">
+            {{ b.nama }} &middot; {{ 'Laki-laki' if b.sex == 'M' else 'Perempuan' }} &middot;
+            {{ hasil.age_text }} &middot; pengukuran terakhir {{ terbaru.tanggal|tgl_id }}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('prediksi_list') }}" class="tombol sekunder">{{ ikon('kembali') }} Daftar</a>
+        <a href="{{ url_for('kms', balita_id=b.id) }}" class="tombol sekunder">{{ ikon('grafik') }} Grafik KMS</a>
+        <a href="{{ url_for('balita_detail', balita_id=b.id) }}" class="tombol">{{ ikon('anak') }} Data Balita</a>
+    </div>
+</div>
+
+{# ---------------- kesimpulan utama ---------------- #}
+{% set st = hasil.stunting %}
+<div class="kartu" style="border-left:5px solid var(--{{ 'bahaya' if st.level == 'bahaya' else ('waspada' if st.level == 'waspada' else 'normal') }})">
+    <div class="fleks-antara" style="align-items:flex-start">
+        <div>
+            <div class="keterangan-kecil">KESIMPULAN STATUS TINGGI BADAN MENURUT UMUR</div>
+            <h1 style="margin:6px 0 4px;font-size:1.7rem">{{ st.label }}</h1>
+            <div class="teks-lembut">
+                Z-Score TB/U = <b>{{ st.z|zscore if st.z is not none else '-' }}</b>
+                &middot; diukur pada umur {{ hasil.age_text }}
+            </div>
+        </div>
+        <span class="lencana {{ st.level }}" style="font-size:.9rem;padding:8px 16px">
+            {{ 'Stunting' if st.stunted else ('Normal' if st.z is not none else 'Belum dinilai') }}
+        </span>
+    </div>
+</div>
+
+{# ---------------- hasil per indikator ---------------- #}
+<h2 style="margin:22px 0 12px">Hasil Perhitungan Z-Score</h2>
+<div class="kisi kisi-4 mb-3">
+    {% for kode, r in hasil.results.items() %}
+    <div class="z-kotak">
+        <div class="indikator">{{ r.short }}</div>
+        <div class="nilai {{ r.status.level }}">{{ r.z|zscore }}</div>
+        <div class="status">{{ r.status.label }}</div>
+        <div class="keterangan-kecil" style="margin-top:6px">
+            {{ r.label }}<br>{{ r.value|angka(2) }} &middot; {{ r.key_label }}
+        </div>
+    </div>
+    {% endfor %}
+    {% if not hasil.results %}
+    <div class="z-kotak" style="grid-column:1/-1">
+        <div class="keterangan-kecil">Tidak ada indikator yang dapat dihitung dari data terakhir.</div>
+    </div>
+    {% endif %}
+</div>
+
+{% if hasil.warnings %}
+<div class="pesan peringatan mb-3">
+    <span class="ikon">{{ ikon('seru') }}</span>
+    <div>
+        <b>Catatan pemeriksaan data:</b>
+        <ul style="margin:6px 0 0;padding-left:18px">
+            {% for w in hasil.warnings %}<li>{{ w }}</li>{% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+<div class="kisi kisi-2-1">
+    <div>
+        {# ---------------- peringatan dini ---------------- #}
+        <div class="kartu">
+            <h2>{{ ikon('prediksi') }} Peringatan Dini dan Rekomendasi Tindakan</h2>
+            <p class="keterangan-kecil">
+                Disusun dari ambang batas Z-Score WHO dan tren pertumbuhan balita.
+            </p>
+
+            {% for f in hasil.flags %}
+            <div class="peringatan-item {{ f.level }}">
+                <span class="ikon">{{ ikon('seru' if f.level != 'normal' else 'centang') }}</span>
+                <div>
+                    <div class="judul">{{ f.label }}</div>
+                    <p class="pesan">{{ f.pesan }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="peringatan-item netral">
+                <span class="ikon">{{ ikon('info') }}</span>
+                <div><p class="pesan">Belum ada peringatan yang dapat dihitung.</p></div>
+            </div>
+            {% endfor %}
+
+            {% if hasil.trend is defined %}
+            <hr class="pemisah">
+            <h3>Analisis Tren Pertumbuhan</h3>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Arah tren</span>
+                    <span class="nilai">{{ hasil.trend.label }}</span></div>
+                <div class="baris"><span class="kunci">Perubahan total Z-Score</span>
+                    <span class="nilai">{{ hasil.trend.delta_total|angka(2) if hasil.trend.delta_total is not none else '-' }} SD</span></div>
+                <div class="baris"><span class="kunci">Rata-rata per bulan</span>
+                    <span class="nilai">{{ hasil.trend.delta_per_bulan|angka(2) if hasil.trend.delta_per_bulan is not none else '-' }} SD</span></div>
+                <div class="baris"><span class="kunci">Rentang pemantauan</span>
+                    <span class="nilai">{{ hasil.trend.rentang_hari if hasil.trend.rentang_hari is defined else '-' }} hari</span></div>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ---------------- grafik tren Z ---------------- #}
+        <div class="kartu">
+            <h2>{{ ikon('grafik') }} Perkembangan Z-Score dari Waktu ke Waktu</h2>
+            <p class="keterangan-kecil">
+                Garis mendatar menunjukkan ambang batas &minus;2 SD (pendek) dan &minus;3 SD (sangat pendek).
+            </p>
+            <div class="grafik-bungkus" id="grafikTren"></div>
+        </div>
+    </div>
+
+    {# ---------------- kolom samping ---------------- #}
+    <div>
+        <div class="kartu">
+            <h2>{{ ikon('anak') }} Data Pengukuran Terakhir</h2>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Tanggal</span>
+                    <span class="nilai">{{ terbaru.tanggal|tgl_id }}</span></div>
+                <div class="baris"><span class="kunci">Umur saat diukur</span>
+                    <span class="nilai">{{ terbaru.umur_hari|umur }}</span></div>
+                <div class="baris"><span class="kunci">Berat badan</span>
+                    <span class="nilai">{{ terbaru.berat|angka(2) }} kg</span></div>
+                <div class="baris"><span class="kunci">Panjang/tinggi badan</span>
+                    <span class="nilai">{{ terbaru.tinggi|angka(1) }} cm</span></div>
+                <div class="baris"><span class="kunci">Lingkar kepala</span>
+                    <span class="nilai">{{ terbaru.lingkar_kepala|angka(1) if terbaru.lingkar_kepala else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">Cara ukur</span>
+                    <span class="nilai">{{ terbaru.cara_ukur|capitalize }}</span></div>
+            </div>
+        </div>
+
+        <div class="kartu">
+            <h2>{{ ikon('jantung') }} Faktor Pendukung</h2>
+            <div class="rincian">
+                <div class="baris"><span class="kunci">Berat lahir</span>
+                    <span class="nilai">{{ b.bb_lahir|angka(2) if b.bb_lahir else '-' }} kg</span></div>
+                <div class="baris"><span class="kunci">Panjang lahir</span>
+                    <span class="nilai">{{ b.pb_lahir|angka(1) if b.pb_lahir else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">ASI eksklusif</span>
+                    <span class="nilai">
+                        {% if b.asi_eksklusif == 1 %}Ya{% elif b.asi_eksklusif == 0 %}Tidak{% else %}-{% endif %}
+                    </span></div>
+                <div class="baris"><span class="kunci">Tinggi ibu</span>
+                    <span class="nilai">{{ b.tinggi_ibu|angka(1) if b.tinggi_ibu else '-' }} cm</span></div>
+                <div class="baris"><span class="kunci">Jumlah pengukuran</span>
+                    <span class="nilai">{{ riwayat|length }} kali</span></div>
+            </div>
+            <p class="keterangan-kecil" style="margin-top:10px">
+                Faktor ini ditampilkan sebagai konteks pendukung; penentuan status stunting
+                tetap murni memakai Z-Score WHO.
+            </p>
+        </div>
+
+        <div class="kartu">
+            <h2>{{ ikon('catatan') }} Tindak Lanjut</h2>
+            <form method="post" action="{{ url_for('tindak_lanjut_tambah', balita_id=b.id) }}">
+                <div class="form-baris">
+                    <label for="jenis">Jenis Tindakan</label>
+                    <select id="jenis" name="jenis" required>
+                        <option value="">Pilih tindakan</option>
+                        <option value="rujukan">Rujukan ke Puskesmas</option>
+                        <option value="PMT">Pemberian Makanan Tambahan</option>
+                        <option value="edukasi">Edukasi Gizi</option>
+                        <option value="kunjungan rumah">Kunjungan Rumah</option>
+                    </select>
+                </div>
+                <div class="form-baris">
+                    <label for="tanggal">Tanggal</label>
+                    <input type="date" id="tanggal" name="tanggal" value="{{ hari_ini }}" max="{{ hari_ini }}">
+                </div>
+                <div class="form-baris">
+                    <label for="keterangan">Keterangan</label>
+                    <textarea id="keterangan" name="keterangan" rows="2"
+                              placeholder="Uraian tindakan"></textarea>
+                </div>
+                <button type="submit" class="tombol penuh">{{ ikon('tambah') }} Simpan Tindak Lanjut</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block skrip %}
+<script>
+/* Grafik garis Z-Score TB/U sepanjang riwayat pengukuran. */
+(function () {
+    var wadah = document.getElementById('grafikTren');
+    var deret = [
+        {% for r in riwayat|reverse %}
+        {x: {{ r.umur_hari }}, y: {{ r.z_lhfa if r.z_lhfa is not none else 'null' }},
+         tanggal: {{ r.tanggal|tojson }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ].filter(function (p) { return p.y !== null; });
+
+    if (deret.length < 1) {
+        wadah.innerHTML = '<div class="kosong" style="padding:26px">' +
+            '<div>Belum ada nilai Z-Score TB/U yang dapat digambarkan.</div></div>';
+        return;
+    }
+
+    var W = 720, H = 260, M = {atas: 16, kanan: 18, bawah: 34, kiri: 44};
+    var lw = W - M.kiri - M.kanan, lh = H - M.atas - M.bawah;
+
+    var xs = deret.map(function (p) { return p.x; });
+    var xMin = Math.min.apply(null, xs), xMax = Math.max.apply(null, xs);
+    if (xMin === xMax) { xMin -= 30; xMax += 30; }
+
+    var yMin = -4, yMax = 2;
+    deret.forEach(function (p) {
+        if (p.y < yMin) yMin = Math.floor(p.y - 0.5);
+        if (p.y > yMax) yMax = Math.ceil(p.y + 0.5);
+    });
+
+    function sx(v) { return M.kiri + (v - xMin) / (xMax - xMin) * lw; }
+    function sy(v) { return M.atas + lh - (v - yMin) / (yMax - yMin) * lh; }
+
+    var NS = 'http://www.w3.org/2000/svg';
+    function el(tag, at, teks) {
+        var e = document.createElementNS(NS, tag);
+        for (var k in at) if (at.hasOwnProperty(k)) e.setAttribute(k, at[k]);
+        if (teks !== undefined) e.textContent = teks;
+        return e;
+    }
+
+    var svg = el('svg', {viewBox: '0 0 ' + W + ' ' + H, 'class': 'grafik-svg'});
+    svg.appendChild(el('rect', {x: M.kiri, y: M.atas, width: lw, height: lh,
+        fill: '#FCFDFE', stroke: '#E4E7EE', rx: 8}));
+
+    // pita normal dan pita bahaya
+    svg.appendChild(el('rect', {x: M.kiri, y: sy(2), width: lw,
+        height: Math.max(0, sy(-2) - sy(2)), fill: '#E6F6EC', opacity: .55}));
+    svg.appendChild(el('rect', {x: M.kiri, y: sy(-2), width: lw,
+        height: Math.max(0, sy(yMin) - sy(-2)), fill: '#FDECEB', opacity: .6}));
+
+    // garis ambang batas
+    [[-3, '#E5322C', '−3 SD'], [-2, '#EF9000', '−2 SD'], [0, '#2E9E5B', 'Median']]
+        .forEach(function (a) {
+            var y = sy(a[0]);
+            svg.appendChild(el('line', {x1: M.kiri, y1: y, x2: M.kiri + lw, y2: y,
+                stroke: a[1], 'stroke-width': 1.6,
+                'stroke-dasharray': a[0] === 0 ? '' : '5 4'}));
+            svg.appendChild(el('text', {x: M.kiri + lw - 4, y: y - 4,
+                'text-anchor': 'end', 'font-size': 10, fill: a[1],
+                'font-weight': 700}, a[2]));
+        });
+
+    // sumbu Y
+    for (var v = Math.ceil(yMin); v <= yMax; v++) {
+        svg.appendChild(el('text', {x: M.kiri - 7, y: sy(v) + 4,
+            'text-anchor': 'end', 'font-size': 10.5, fill: '#8A92A3'},
+            (v > 0 ? '+' : '') + v));
+    }
+
+    // sumbu X (umur dalam bulan)
+    [0, .25, .5, .75, 1].forEach(function (f) {
+        var xv = xMin + (xMax - xMin) * f;
+        svg.appendChild(el('text', {x: sx(xv), y: M.atas + lh + 16,
+            'text-anchor': 'middle', 'font-size': 10.5, fill: '#8A92A3'},
+            Math.round(xv / 30.44) + ' bln'));
+    });
+
+    // garis dan titik Z anak
+    var d = deret.map(function (p, i) {
+        return (i ? 'L' : 'M') + sx(p.x).toFixed(1) + ' ' + sy(p.y).toFixed(1);
+    }).join(' ');
+    svg.appendChild(el('path', {d: d, fill: 'none', stroke: '#105A3C',
+        'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round'}));
+
+    deret.forEach(function (p) {
+        var c = el('circle', {cx: sx(p.x), cy: sy(p.y), r: 4.6,
+            fill: GrafikKMS.warnaTitik(p.y), stroke: '#fff', 'stroke-width': 2});
+        var t = el('title', {}, p.tanggal + ' — Z ' + p.y.toFixed(2) + ' SD');
+        c.appendChild(t);
+        svg.appendChild(c);
+    });
+
+    svg.appendChild(el('text', {x: M.kiri + lw / 2, y: H - 2, 'text-anchor': 'middle',
+        'font-size': 10.5, fill: '#5A6272', 'font-weight': 600}, 'Umur anak (bulan)'));
+
+    wadah.appendChild(svg);
+
+    var leg = document.createElement('div');
+    leg.className = 'grafik-legend';
+    leg.innerHTML = '<span class="butir"><span class="garis" style="background:#2E9E5B"></span>Median (0 SD)</span>' +
+        '<span class="butir"><span class="garis" style="background:#EF9000"></span>Batas &minus;2 SD (pendek)</span>' +
+        '<span class="butir"><span class="garis" style="background:#E5322C"></span>Batas &minus;3 SD (sangat pendek)</span>' +
+        '<span class="butir"><span class="garis" style="background:#105A3C"></span>Z-Score anak</span>';
+    wadah.appendChild(leg);
+})();
+</script>
+{% endblock %}

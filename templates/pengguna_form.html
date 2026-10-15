@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'pengguna' %}
+{% block judul %}{{ 'Ubah Akun' if mode == 'edit' else 'Tambah Akun' }}{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>{{ 'Ubah Akun Pengguna' if mode == 'edit' else 'Tambah Akun Pengguna' }}</h1>
+        <div class="keterangan">
+            {% if mode == 'edit' %}
+                Perbarui data akun. Biarkan kolom kata sandi kosong bila tidak ingin mengubahnya.
+            {% else %}
+                Buat akun baru beserta perannya dalam sistem.
+            {% endif %}
+        </div>
+    </div>
+    <div class="aksi">
+        <a href="{{ url_for('pengguna_list') }}" class="tombol sekunder">{{ ikon('kembali') }} Kembali</a>
+    </div>
+</div>
+
+<form method="post">
+    <div class="kisi kisi-2-1">
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('pengguna') }} Data Akun</h2>
+
+                {% if mode == 'tambah' %}
+                <div class="form-baris">
+                    <label for="username">Nama Pengguna <span class="wajib">*</span></label>
+                    <input type="text" id="username" name="username" required
+                           value="{{ data.username if data.username is defined and data.username else '' }}"
+                           placeholder="huruf kecil tanpa spasi, contoh: kader2">
+                    <div class="keterangan-kecil" style="margin-top:5px">
+                        Digunakan untuk masuk ke sistem. Tidak dapat diubah setelah akun dibuat.
+                    </div>
+                </div>
+                {% else %}
+                <div class="form-baris">
+                    <label>Nama Pengguna</label>
+                    <input type="text" value="{{ data.username }}" disabled>
+                    <div class="keterangan-kecil" style="margin-top:5px">
+                        Nama pengguna tidak dapat diubah.
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="form-baris">
+                    <label for="nama">Nama Lengkap <span class="wajib">*</span></label>
+                    <input type="text" id="nama" name="nama" required
+                           value="{{ data.nama if data.nama is defined and data.nama else '' }}"
+                           placeholder="Nama lengkap pengguna">
+                </div>
+
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="jabatan">Jabatan</label>
+                        <input type="text" id="jabatan" name="jabatan"
+                               value="{{ data.jabatan if data.jabatan is defined and data.jabatan else '' }}"
+                               placeholder="contoh: Kader Posyandu">
+                    </div>
+                    <div class="form-baris">
+                        <label for="role">Peran <span class="wajib">*</span></label>
+                        <select id="role" name="role" required>
+                            <option value="kader" {{ 'selected' if data.role == 'kader' or not data.role }}>Kader</option>
+                            <option value="bidan" {{ 'selected' if data.role == 'bidan' }}>Bidan</option>
+                            <option value="admin" {{ 'selected' if data.role == 'admin' }}>Administrator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-baris">
+                    <label for="password">
+                        Kata Sandi {% if mode == 'tambah' %}<span class="wajib">*</span>{% endif %}
+                        {% if mode == 'edit' %}<span class="bantuan">(kosongkan bila tidak diubah)</span>{% endif %}
+                    </label>
+                    <div class="sandi-bungkus" style="position:relative">
+                        <input type="password" id="password" name="password"
+                               {{ 'required' if mode == 'tambah' }}
+                               placeholder="{{ 'Minimal 6 karakter' if mode == 'tambah' else 'Kata sandi baru (opsional)' }}"
+                               minlength="6" autocomplete="new-password">
+                        <button type="button" class="sandi-lihat" data-lihat-sandi="#password"
+                                aria-label="Tampilkan kata sandi">{{ ikon('lihat') }}</button>
+                    </div>
+                </div>
+
+                {% if mode == 'edit' %}
+                <div class="form-baris">
+                    <label class="radio-kotak" style="display:inline-flex">
+                        <input type="checkbox" name="aktif" value="1"
+                               {{ 'checked' if data.aktif }}>
+                        Akun aktif (dapat digunakan untuk masuk)
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('perisai') }} Hak Akses</h2>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">Kader</span>
+                        <span class="nilai">Data balita &amp; penimbangan</span></div>
+                    <div class="baris"><span class="kunci">Bidan</span>
+                        <span class="nilai">Ditambah prediksi &amp; tindak lanjut</span></div>
+                    <div class="baris"><span class="kunci">Administrator</span>
+                        <span class="nilai">Seluruh sistem</span></div>
+                </div>
+            </div>
+
+            <div class="kartu">
+                <div class="form-aksi" style="border-top:none;margin-top:0;padding-top:0">
+                    <button type="submit" class="tombol penuh">
+                        {{ ikon('centang') }} {{ 'Simpan Perubahan' if mode == 'edit' else 'Buat Akun' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

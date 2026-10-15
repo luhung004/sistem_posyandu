@@ -1,0 +1,142 @@
+{# ===========================================================================
+   Laporan siap cetak (juga dapat disimpan sebagai PDF dari peramban)
+   =========================================================================== #}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laporan Status Gizi &middot; {{ identitas.nama }}</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    body { background: #fff; }
+    .halaman { max-width: 1040px; margin: 0 auto; padding: 28px 22px 60px; }
+    .kop { display: flex; align-items: center; gap: 16px;
+           border-bottom: 3px double var(--tema); padding-bottom: 14px; margin-bottom: 20px; }
+    .kop img { width: 74px; height: 74px; }
+    .kop .teks { flex: 1; }
+    .kop .teks h1 { margin: 0; font-size: 1.22rem; text-transform: uppercase; letter-spacing: .4px; }
+    .kop .teks .sub { font-size: .84rem; color: var(--tinta-lembut); }
+    .kop .teks .alamat { font-size: .76rem; color: var(--tinta-samar); margin-top: 3px; }
+    .judul-laporan { text-align: center; margin: 22px 0 4px; }
+    .judul-laporan h2 { margin: 0; font-size: 1.05rem; text-transform: uppercase; }
+    .judul-laporan .periode { font-size: .84rem; color: var(--tinta-lembut); }
+    .ringkas-cetak { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; }
+    .ringkas-cetak .kotak {
+        flex: 1; min-width: 128px; border: 1px solid var(--garis);
+        border-radius: var(--r); padding: 11px 13px; text-align: center;
+    }
+    .ringkas-cetak .kotak .l { font-size: .7rem; text-transform: uppercase;
+        letter-spacing: .05em; color: var(--tinta-lembut); font-weight: 700; }
+    .ringkas-cetak .kotak .n { font-size: 1.4rem; font-weight: 800; }
+    .ttd { margin-top: 44px; display: flex; justify-content: flex-end; }
+    .ttd .blok { text-align: center; font-size: .86rem; }
+    .ttd .blok .ruang { height: 62px; }
+    .catatan-kaki { margin-top: 26px; font-size: .74rem; color: var(--tinta-samar);
+        border-top: 1px solid var(--garis); padding-top: 12px; }
+    @media print {
+        .halaman { padding: 0; max-width: none; }
+        .tombol-cetak { display: none; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+<div class="halaman">
+
+    <div class="kop">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo">
+        <div class="teks">
+            <h1>{{ identitas.nama }}</h1>
+            <div class="sub">{{ identitas.wilayah }} &middot; {{ identitas.kecamatan }} &middot; {{ identitas.kabupaten }}</div>
+            <div class="alamat">{{ identitas.provinsi }} &middot; Mitra {{ identitas.puskesmas }}</div>
+        </div>
+    </div>
+
+    <div class="judul-laporan">
+        <h2>Laporan Status Gizi dan Stunting Balita</h2>
+        <div class="periode">Periode {{ dari|tgl_id }} sampai {{ sampai|tgl_id }}</div>
+    </div>
+
+    <div class="ringkas-cetak">
+        <div class="kotak"><div class="l">Jumlah Balita</div><div class="n">{{ rekap.total }}</div></div>
+        <div class="kotak"><div class="l">Normal</div><div class="n">{{ rekap.normal }}</div></div>
+        <div class="kotak"><div class="l">Pendek</div><div class="n">{{ rekap.pendek }}</div></div>
+        <div class="kotak"><div class="l">Sangat Pendek</div><div class="n">{{ rekap.sangat_pendek }}</div></div>
+        <div class="kotak"><div class="l">Stunting</div><div class="n">{{ rekap.stunting }}</div></div>
+        <div class="kotak"><div class="l">Prevalensi</div><div class="n">{{ rekap.persen_stunting }}%</div></div>
+    </div>
+
+    <table class="data">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Nama Balita</th>
+                <th>L/P</th>
+                <th>Tgl Lahir</th>
+                <th>Umur</th>
+                <th>Nama Ibu</th>
+                <th class="angka">BB (kg)</th>
+                <th class="angka">TB (cm)</th>
+                <th class="angka">Z BB/U</th>
+                <th class="angka">Z TB/U</th>
+                <th>Status Stunting</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for x in hasil %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ x.nama }}</td>
+                <td>{{ 'L' if x.sex == 'M' else 'P' }}</td>
+                <td>{{ x.birth_date|tgl_id('pendek') }}</td>
+                <td>{{ x.umur_kini|umur }}</td>
+                <td>{{ x.nama_ibu or '-' }}</td>
+                <td class="angka">{{ x.berat|angka(2) }}</td>
+                <td class="angka">{{ x.tinggi|angka(1) }}</td>
+                <td class="angka">{{ x.z_wfa|zscore if x.z_wfa is not none else '-' }}</td>
+                <td class="angka">{{ x.z_lhfa|zscore if x.z_lhfa is not none else '-' }}</td>
+                <td>{{ x.stunting.label }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="11" class="teks-tengah">Tidak ada data pada periode ini.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="ttd">
+        <div class="blok">
+            <div>Banjarnegara, {{ hari_ini|tgl_id }}</div>
+            <div>Kader Posyandu</div>
+            <div class="ruang"></div>
+            <div><b><u>{{ user.nama }}</u></b></div>
+        </div>
+    </div>
+
+    <div class="catatan-kaki">
+        Status gizi dihitung menggunakan Z-Score WHO Child Growth Standards (2006) dengan
+        parameter L-M-S resmi WHO dan diklasifikasikan menurut Standar Antropometri Anak
+        Kementerian Kesehatan RI. Balita dinyatakan <b>pendek (stunting)</b> bila Z-Score
+        TB/U &lt; &minus;2 SD dan <b>sangat pendek</b> bila &lt; &minus;3 SD.
+        Laporan dicetak dari Sistem Informasi E-Posyandu pada {{ hari_ini|tgl_id }}.
+    </div>
+
+    <div class="teks-tengah tombol-cetak" style="margin-top:26px">
+        <button class="tombol" onclick="window.print()">Cetak / Simpan PDF</button>
+        <a href="{{ url_for('laporan', dari=dari, sampai=sampai) }}" class="tombol sekunder">Kembali</a>
+    </div>
+</div>
+
+<script>
+// Cetak otomatis bila halaman dibuka dengan ?cetak=1
+if (new URLSearchParams(location.search).get('cetak') === '1') {
+    window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 400); });
+}
+</script>
+</body>
+</html>

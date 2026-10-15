@@ -1,0 +1,119 @@
+{# ===========================================================================
+   Kerangka utama: sidebar navigasi + bilah atas + isi halaman
+   =========================================================================== #}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block judul %}Beranda{% endblock %} &middot; {{ app_name }}</title>
+<link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="tataletak">
+
+    {# ---------- sidebar ---------- #}
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-merek">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Posyandu">
+            <div>
+                <div class="nama">E-Posyandu</div>
+                <div class="sub">Lestari 12 &middot; Merden</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-judul">Utama</div>
+            <a href="{{ url_for('dashboard') }}" class="{{ 'aktif' if aktif == 'dashboard' }}">
+                <span class="ikon">{{ ikon('beranda') }}</span> Beranda
+            </a>
+
+            <div class="sidebar-judul">Data</div>
+            <a href="{{ url_for('balita_list') }}" class="{{ 'aktif' if aktif == 'balita' }}">
+                <span class="ikon">{{ ikon('anak') }}</span> Data Balita
+            </a>
+            <a href="{{ url_for('pengukuran_list') }}" class="{{ 'aktif' if aktif == 'pengukuran' }}">
+                <span class="ikon">{{ ikon('timbang') }}</span> Penimbangan
+            </a>
+
+            <div class="sidebar-judul">Analisis</div>
+            <a href="{{ url_for('prediksi_list') }}" class="{{ 'aktif' if aktif == 'prediksi' }}">
+                <span class="ikon">{{ ikon('prediksi') }}</span> Prediksi Dini
+            </a>
+            <a href="{{ url_for('laporan') }}" class="{{ 'aktif' if aktif == 'laporan' }}">
+                <span class="ikon">{{ ikon('laporan') }}</span> Laporan
+            </a>
+
+            {% if user and user.role == 'admin' %}
+            <div class="sidebar-judul">Administrasi</div>
+            <a href="{{ url_for('pengguna_list') }}" class="{{ 'aktif' if aktif == 'pengguna' }}">
+                <span class="ikon">{{ ikon('pengguna') }}</span> Manajemen Akun
+            </a>
+            <a href="{{ url_for('pengaturan') }}" class="{{ 'aktif' if aktif == 'pengaturan' }}">
+                <span class="ikon">{{ ikon('setelan') }}</span> Pengaturan
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="sidebar-kaki">
+            Posyandu Lestari 12<br>
+            {{ identitas.wilayah }} &middot; {{ identitas.kabupaten }}
+        </div>
+    </aside>
+
+    <div class="tirai" id="tirai"></div>
+
+    {# ---------- isi ---------- #}
+    <div class="isi">
+        <header class="bilah-atas">
+            <div class="fleks">
+                <button class="tombol-menu" id="tombolMenu" aria-label="Buka menu">
+                    {{ ikon('menu') }}
+                </button>
+                <div>
+                    <div class="judul">{% block judul_bilah %}{{ self.judul() }}{% endblock %}</div>
+                    <div class="jejak">{{ identitas.nama }} &middot; {{ identitas.kecamatan }}</div>
+                </div>
+            </div>
+
+            <div class="pengguna">
+                <div class="avatar">{{ user.nama[0]|upper if user else '?' }}</div>
+                <div class="teks">
+                    <div class="nama">{{ user.nama if user else '-' }}</div>
+                    <div class="peran">{{ user.role if user else '-' }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="tombol sekunder kecil" title="Keluar">
+                    {{ ikon('keluar') }} Keluar
+                </a>
+            </div>
+        </header>
+
+        <main class="isi-utama">
+            {% with pesan = get_flashed_messages(with_categories=true) %}
+                {% if pesan %}
+                <div class="pesan-tumpuk">
+                    {% for kategori, teks in pesan %}
+                    <div class="pesan {{ kategori }}">
+                        <span class="ikon">{{ ikon('info' if kategori == 'info' else ('centang' if kategori == 'sukses' else ('seru' if kategori == 'peringatan' else 'silang'))) }}</span>
+                        <span>{{ teks }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block isi %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block skrip %}{% endblock %}
+</body>
+</html>

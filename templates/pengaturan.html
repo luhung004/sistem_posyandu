@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "_ikon.html" as ikon_ %}
+{% set ikon = ikon_.ikon %}
+{% set aktif = 'pengaturan' %}
+{% block judul %}Pengaturan{% endblock %}
+
+{% block isi %}
+
+<div class="kepala-halaman">
+    <div>
+        <h1>Pengaturan Sistem</h1>
+        <div class="keterangan">
+            Identitas posyandu yang ditampilkan pada laporan dan halaman masuk.
+        </div>
+    </div>
+</div>
+
+<form method="post">
+    <div class="kisi kisi-2-1">
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('lokasi') }} Identitas Posyandu</h2>
+                <div class="form-kisi dua">
+                    <div class="form-baris">
+                        <label for="nama_posyandu">Nama Posyandu</label>
+                        <input type="text" id="nama_posyandu" name="nama_posyandu"
+                               value="{{ data.nama_posyandu or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="wilayah">Wilayah / Dusun</label>
+                        <input type="text" id="wilayah" name="wilayah" value="{{ data.wilayah or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="desa">Desa</label>
+                        <input type="text" id="desa" name="desa" value="{{ data.desa or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="kecamatan">Kecamatan</label>
+                        <input type="text" id="kecamatan" name="kecamatan" value="{{ data.kecamatan or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="kabupaten">Kabupaten</label>
+                        <input type="text" id="kabupaten" name="kabupaten" value="{{ data.kabupaten or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="provinsi">Provinsi</label>
+                        <input type="text" id="provinsi" name="provinsi" value="{{ data.provinsi or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="puskesmas">Puskesmas Mitra</label>
+                        <input type="text" id="puskesmas" name="puskesmas" value="{{ data.puskesmas or '' }}">
+                    </div>
+                    <div class="form-baris">
+                        <label for="nama_ketua">Nama Ketua / Kader Utama</label>
+                        <input type="text" id="nama_ketua" name="nama_ketua" value="{{ data.nama_ketua or '' }}">
+                    </div>
+                </div>
+                <button type="submit" class="tombol">{{ ikon('centang') }} Simpan Pengaturan</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="kartu">
+                <h2>{{ ikon('info') }} Informasi Sistem</h2>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">Nama sistem</span>
+                        <span class="nilai">E-Posyandu Terintegrasi</span></div>
+                    <div class="baris"><span class="kunci">Versi</span><span class="nilai">1.0</span></div>
+                    <div class="baris"><span class="kunci">Standar rujukan</span>
+                        <span class="nilai">WHO Child Growth Standards 2006</span></div>
+                    <div class="baris"><span class="kunci">Basis data</span><span class="nilai">SQLite</span></div>
+                </div>
+            </div>
+
+            <div class="kartu">
+                <h2>{{ ikon('perisai') }} Tabel Rujukan WHO</h2>
+                <p class="keterangan-kecil">
+                    Sistem memuat tabel L-M-S resmi WHO untuk 5 indikator pertumbuhan,
+                    masing-masing untuk laki-laki dan perempuan.
+                </p>
+                <div class="rincian">
+                    <div class="baris"><span class="kunci">BB/U (berat menurut umur)</span>
+                        <span class="nilai">0&ndash;1856 hari</span></div>
+                    <div class="baris"><span class="kunci">TB/U (tinggi menurut umur)</span>
+                        <span class="nilai">0&ndash;1856 hari</span></div>
+                    <div class="baris"><span class="kunci">LK/U (lingkar kepala)</span>
+                        <span class="nilai">0&ndash;1856 hari</span></div>
+                    <div class="baris"><span class="kunci">BB/PB</span><span class="nilai">45&ndash;110 cm</span></div>
+                    <div class="baris"><span class="kunci">BB/TB</span><span class="nilai">65&ndash;120 cm</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
