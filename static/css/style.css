@@ -105,6 +105,7 @@ h1 > svg, h2 > svg, h3 > svg, h4 > svg {
     background-repeat: no-repeat;
     background-position: left top;
     background-size: var(--lebar-sidebar) 100%;
+    transition: background-size .22s ease;
 }
 
 .sidebar {
@@ -119,6 +120,14 @@ h1 > svg, h2 > svg, h3 > svg, h4 > svg {
     top: 0;
     height: 100vh;
     overflow: hidden;
+    transition: width .22s ease, flex-basis .22s ease, opacity .18s ease;
+}
+
+/* Sidebar diciutkan lewat tombol garis tiga (hanya pada layar lebar).
+   Lebar jadi 0 sehingga isi halaman melebar mengisi ruang kosong. */
+@media (min-width: 981px) {
+    .tataletak.sidebar-ciut { --lebar-sidebar: 0px; }
+    .tataletak.sidebar-ciut .sidebar { opacity: 0; pointer-events: none; }
 }
 
 .sidebar-merek {
@@ -140,6 +149,31 @@ h1 > svg, h2 > svg, h3 > svg, h4 > svg {
 
 .sidebar-merek .nama { font-weight: 800; font-size: 1.02rem; letter-spacing: .2px; }
 .sidebar-merek .sub { font-size: .72rem; opacity: .78; line-height: 1.3; }
+
+/* Tombol menu di sidebar-merek */
+.sidebar-merek .tombol-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: var(--r-kecil);
+    padding: 6px;
+    cursor: pointer;
+    color: #fff;
+    margin-right: 10px;
+    transition: background .15s, border-color .15s, color .15s;
+}
+.sidebar-merek .tombol-menu:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #fff;
+    color: #fff;
+}
+.sidebar-merek .tombol-menu svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
 
 /* Menu boleh menyusut & menggulir sendiri saat layar pendek, supaya blok
    identitas di kaki sidebar tetap terlihat (dulu isi sidebar terpotong
@@ -940,7 +974,6 @@ select { cursor: pointer; }
         background: linear-gradient(168deg, var(--tema-tua) 0%, var(--tema) 52%, #159C68 100%);
     }
     .sidebar.terbuka { transform: translateX(0); }
-    .tombol-menu { display: inline-flex !important; }
     .isi-utama { padding: 18px 16px 40px; }
     .bilah-atas { padding: 0 16px; }
 }
@@ -956,11 +989,17 @@ select { cursor: pointer; }
     .grafik-legend { font-size: .72rem; }
 }
 
+/* Tombol garis tiga di pojok kiri atas: selalu tampil, baik di layar lebar
+   (menciutkan sidebar) maupun di layar kecil (membuka sidebar geser). */
 .tombol-menu {
-    display: none; background: none; border: 1px solid var(--garis);
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: 1px solid var(--garis);
     border-radius: var(--r-kecil); padding: 6px; cursor: pointer;
     color: var(--tinta); margin-right: 10px;
+    transition: background .15s, border-color .15s, color .15s;
 }
+.tombol-menu:hover { background: var(--tema-sangat-muda); border-color: var(--tema); color: var(--tema-tua); }
+.tombol-menu:focus-visible { outline: 2px solid var(--tema); outline-offset: 2px; }
 .tombol-menu svg { width: 20px; height: 20px; display: block; }
 
 .tirai {

@@ -14,10 +14,14 @@
 
     siap(function () {
 
-    /* ---- buka/tutup sidebar pada layar kecil ---- */
+    /* ---- tombol garis tiga: buka/tutup sidebar ----
+       Layar lebar (>= 981px): sidebar diciutkan/ dimunculkan kembali.
+       Layar kecil  (< 981px): sidebar melayang dari kiri + tirai gelap. */
+    var tataletak = document.querySelector('.tataletak');
     var sidebar = document.getElementById('sidebar');
     var tombolMenu = document.getElementById('tombolMenu');
     var tirai = document.getElementById('tirai');
+    var layarKecil = window.matchMedia('(max-width: 980px)');
 
     function tutupMenu() {
         if (sidebar) sidebar.classList.remove('terbuka');
@@ -25,11 +29,34 @@
     }
     if (tombolMenu && sidebar) {
         tombolMenu.addEventListener('click', function () {
-            sidebar.classList.toggle('terbuka');
-            if (tirai) tirai.classList.toggle('tampil');
+            if (layarKecil.matches) {
+                sidebar.classList.toggle('terbuka');
+                if (tirai) tirai.classList.toggle('tampil');
+            } else if (tataletak) {
+                tataletak.classList.toggle('sidebar-ciut');
+            }
         });
     }
     if (tirai) tirai.addEventListener('click', tutupMenu);
+
+    /* Kembali ke layar lebar: bersihkan sisa keadaan menu geser. */
+    function rapikanMenu() {
+        if (!layarKecil.matches) {
+            tutupMenu();
+        } else if (tataletak) {
+            tataletak.classList.remove('sidebar-ciut');
+        }
+    }
+    if (layarKecil.addEventListener) {
+        layarKecil.addEventListener('change', rapikanMenu);
+    } else if (layarKecil.addListener) {
+        layarKecil.addListener(rapikanMenu);
+    }
+
+    /* Tekan Esc untuk menutup sidebar geser. */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') tutupMenu();
+    });
 
     /* ---- konfirmasi tindakan yang menghapus data ---- */
     document.querySelectorAll('form[data-konfirmasi]').forEach(function (form) {

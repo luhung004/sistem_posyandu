@@ -21,6 +21,9 @@
     {# ---------- sidebar ---------- #}
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-merek">
+            <button class="tombol-menu" id="tombolMenu" aria-label="Buka menu">
+                {{ ikon('menu') }}
+            </button>
             <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Posyandu">
             <div>
                 <div class="nama">E-Posyandu</div>
@@ -73,9 +76,6 @@
     <div class="isi">
         <header class="bilah-atas">
             <div class="fleks">
-                <button class="tombol-menu" id="tombolMenu" aria-label="Buka menu">
-                    {{ ikon('menu') }}
-                </button>
                 <div>
                     <div class="judul">{% block judul_bilah %}{{ self.judul() }}{% endblock %}</div>
                     <div class="jejak">{{ identitas.nama }} &middot; {{ identitas.kecamatan }}</div>
